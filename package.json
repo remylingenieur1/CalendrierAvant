@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "three": "^0.186.1",
+    "utif": "^3.1.0"
+  },
+  "name": "calendrieravant",
+  "version": "1.0.0",
+  "description": "",
+  "main": "cloud-rendrer.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "devDependencies": {
+    "vite": "^8.3.7"
+  }
+}

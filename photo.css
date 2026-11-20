@@ -1,0 +1,273 @@
+@import url(https://fonts.bunny.net/css?family=allison:400|caveat:400);
+
+@layer base, demo;
+
+@layer demo {
+  body {
+    font-family: "Caveat", handwriting;
+  }
+
+  .gallery {
+    --card-size: min(80vw, 350px);
+    /* prev and next marker buttons */
+    --nav-btn-size: 40px;
+    --nav-btn-bg: var(--canvas-lines);
+    --nav-btn-bg-hover: var(--canvas-lines);
+    --nav-btn-font-size: 1.4rem;
+    --nav-btn-txt: var(--canvas-txt);
+    --nav-btn-txt-hover: dodgerblue;
+
+    --marker-size: 12px;
+    --marker-bg: var(--canvas-lines);
+    --marker-bg-hover: var(--canvas-txt);
+    --marker-bg-current: dodgerblue;
+
+    --card-shadow-1: light-dark(rgb(0 0 0 / 10%), rgb(255 255 255 / 10%));
+    --card-shadow-2: light-dark(rgb(0 0 0 / 12%), rgb(255 255 255 / 12%));
+    --card-shadow-3: light-dark(rgb(0 0 0 / 8%), rgb(255 255 255 / 8%));
+
+    position: fixed;
+    inset: 0;
+    display: grid;
+    grid-auto-rows: var(--card-size);
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    scroll-snap-type: y mandatory;
+    overscroll-behavior-y: contain;
+    scroll-timeline-axis: block;
+    scroll-marker-group: after;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+
+    /* markers & nav buttons positioned using anchor positioning - because we can*/
+    anchor-name: --a-gallery;
+
+    /* empty pseudo elements to allow first and last images to be displayed fully */
+    &::before,
+    &::after {
+      content: "";
+      height: 50vh;
+    }
+
+    /* markers - thumb dots */
+    scroll-marker-group: after; /* place after elements*/
+    
+		@supports  selector(::scroll-marker-group) {
+			&::scroll-marker-group {
+	      position: absolute;
+	      inline-size: min(50vw, 800px);
+	      block-size: var(
+	        --nav-btn-size
+	      ); /* same height as the nav buttons to centralize the markers with the buttons */
+	      position-anchor: --a-gallery;
+	      display: flex;
+	      align-items: center;
+	      justify-content: center;
+	      justify-self: center;
+	      flex-wrap: wrap balance;
+	      gap: 0.25rem;
+	
+	      top: calc(anchor(top) + 1rem);
+	      left: calc(anchor(left) - 1rem);
+	      right: calc(anchor(right) - 1rem);
+	    }
+		}
+
+    figure {
+      /* Note - the card will not be visible but will scroll "normally" */
+      margin-inline: auto;
+      scroll-snap-align: center;
+
+      /* ensures that the scroll stops at each element */
+      scroll-snap-stop: always;
+
+      /* scroll to this item on load */
+      &[scroll-start] {
+        scroll-initial-target: nearest;
+      }
+
+      /* define timeline for cards */
+      view-timeline-name: --card-view;
+      view-timeline-axis: block;
+
+      /*container-type: scroll-state; /* define container for child animations */
+      /*outline: 1px dashed red;*/
+
+      div {
+        padding: 1rem 1rem 3rem;
+        border-radius: 3px;
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        box-shadow:
+          0 2px 4px var(--card-shadow-1),
+          0 8px 16px var(--card-shadow-2),
+          0 20px 35px var(--card-shadow-3);
+
+        animation: --k-fly-through linear both;
+        animation-timeline: --card-view;
+        animation-range: cover 20% exit 0%;
+      }
+
+      figcaption {
+				margin-top: .5rem;
+        font-size: 1.4rem;
+        opacity: 1;
+        transition: all 300ms ease-in-out;
+      }
+      img {
+        width: var(--card-size);
+        height: var(--card-size);
+      }
+
+      &::scroll-marker {
+        content: "";
+        block-size: var(--marker-size);
+        aspect-ratio: 1;
+        background-color: var(--marker-bg);
+        border-radius: 9in;
+        transition-property: opacity, scale, outline, color,background-color;
+	      transition-duration: 150ms;
+	      transition-timing-function: ease-in-out;
+      }
+
+      &::scroll-marker:hover {
+        background-color: var(--marker-bg-hover);
+      }
+      &::scroll-marker:focus-visible {
+        outline: 1px dashed var(--marker-bg-hover);
+        outline-offset: 4px;
+      }
+      &::scroll-marker:target-current {
+        background-color: var(--marker-bg-current);
+        pointer-events: none;
+	      /*aspect-ratio: 2/1;*/ 
+      }
+    }
+
+    /************* NAV BUTTONS (prev & next) ************/
+    &::scroll-button(*) {
+      position: absolute;
+      position-anchor: --a-gallery;
+      top: calc(anchor(top) + 1rem);
+
+      width: var(--nav-btn-size);
+      aspect-ratio: 1/1;
+      font: inherit;
+      font-size: var(--nav-btn-font-size);
+      background-color: var(--nav-btn-bg);
+      display: grid;
+      place-content: center;
+      color: var(--nav-btn-txt);
+      border: none;
+      border-radius: 50%;
+      opacity: 0.5;
+      cursor: pointer;
+      transition-property: opacity, scale, outline, color;
+      transition-duration: 150ms;
+      transition-timing-function: ease-in-out;
+      outline: 1px dashed transparent;
+      outline-offset: 0px;
+      z-index: 999;
+    }
+    /* button - prev */
+    &::scroll-button(block-start) {
+      content: "❮";
+      left: calc(anchor(left) + 5rem);
+    }
+    /* button - next */
+    &::scroll-button(block-end) {
+      content: "❯";
+      right: calc(anchor(right) + 5rem);
+    }
+    /* hover and keyboard focus */
+    &::scroll-button(*):not(:disabled):focus-visible,
+    &::scroll-button(*):not(:disabled):hover {
+      opacity: 1;
+      scale: 1.1;
+      background-color: var(--nav-btn-bg-hover);
+      color: var(--nav-btn-txt-hover);
+    }
+    /* keyboard focus*/
+    &::scroll-button(*):not(:disabled):focus-visible {
+      outline: 1px dashed var(--nav-btn-bg-hover);
+      outline-offset: 4px;
+    }
+    /* disabled */
+    &::scroll-button(*):disabled {
+      opacity: 0.15;
+      cursor: unset;
+    }
+  }
+
+  @keyframes --k-fly-through {
+    0% {
+      scale: 0;
+      opacity: 0;
+      rotate: random(22deg, 0deg);
+      pointer-events: none;
+    }
+    40%,
+    60% {
+      scale: 1;
+      opacity: 1;
+      rotate: 0deg;
+    }
+    90% {
+      opacity: 0;
+    }
+    100% {
+      scale: 3;
+      opacity: 0;
+      rotate: random(-22deg, 0deg);
+      pointer-events: none;
+    }
+  }
+}
+
+/* general styling not relevant for this demo */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  :root {
+    color-scheme: light dark;
+    --bg-dark: rgb(24 24 27);
+    --bg-light: rgb(248, 244, 238);
+    --txt-light: rgb(10, 10, 10);
+    --txt-dark: rgb(245 245 245);
+    --line-light: rgb(0 0 0 / 0.25);
+    --line-dark: rgb(255 255 255 / 0.25);
+
+    --canvas-bg: light-dark(var(--bg-light), var(--bg-dark));
+    --canvas-txt: light-dark(var(--txt-light), var(--txt-dark));
+    --canvas-lines: light-dark(var(--line-light), var(--line-dark));
+  }
+
+  body {
+    background-color: var(--canvas-bg);
+    color: var(--canvas-txt);
+    min-height: 100svh;
+    margin: 0;
+    padding: 2rem;
+    font-family: system-ui, sans-serif;
+    font-size: 1rem;
+    @supports not  selector(::scroll-marker-group) {
+			&::after {
+  				content:"Sorry, your browser doesn't support ::scroll-* so you won't see navigation buttons and markers.\ It currently only works on Chromium browsers and possibly behind a flag.";
+    font-family: system-ui, sans-serif;
+    white-space: pre-line;
+  				position: fixed;
+  				bottom: 1rem;
+  				left: 50%;
+  				translate: -50% 0;
+  				font-size: 0.8rem;
+          color: white;
+					background-color: red;
+					padding: .5em 1em;
+  		}
+		}
+  }
+
+}
