@@ -5,7 +5,7 @@ import { createPhysics } from "./physics.js";
 import { createControls } from "./controls.js";
 
 const CONFIG = {
-  count: 48,
+  count: 70,
   spawnInterval: 0.12, // seconds between drips
   spawnSpeed: 9, // units/s toward the centre as each icon enters
   attraction: 6, // spring to the centre, accel per unit of distance
