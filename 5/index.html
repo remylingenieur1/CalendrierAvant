@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="author" content="Grant Jenkins" />
+    <meta
+      name="description"
+      content="Follow a horse, pig, cow, sheep, and fluttering chicken around a winding track in this interactive 3D world."
+    />
+    <title>Wild Run 3D</title>
+    <link rel="icon" href="data:," />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div
+      id="scene"
+      aria-label="A horse, pig, cow, sheep and chicken running around a winding voxel track"
+    ></div>
+    <header class="heading">
+      <h1>Wild Run</h1>
+      <p>Drag to orbit. Click an animal to follow.</p>
+    </header>
+    <nav class="animal-picker" aria-label="Choose an animal to follow">
+      <button
+        class="animal-button"
+        type="button"
+        data-animal="horse"
+        aria-label="Follow horse"
+        aria-pressed="true"
+      >
+        <svg
+          viewBox="0 0 32 32"
+          aria-hidden="true"
+          focusable="false"
+          shape-rendering="crispEdges"
+        >
+          <path fill="#352d29" d="M10 4h7v6h-7zM7 10h6v17H7z" />
+          <path
+            fill="#885338"
+            d="M13 3h4v8h-4zM22 3h4v8h-4zM11 9h16v16H11zM9 21h9v8H9z"
+          />
+          <path fill="#b48c66" d="M9 21h19v8H9z" />
+          <path fill="#dfd5b8" d="M17 10h3v12h-3z" />
+          <path fill="#141b1b" d="M23 13h3v4h-3zM24 24h2v2h-2z" />
+          <path fill="#f4ecd2" d="M23 13h1v1h-1z" />
+        </svg>
+        <span>Horse</span>
+      </button>
+      <button
+        class="animal-button"
+        type="button"
+        data-animal="pig"
+        aria-label="Follow pig"
+        aria-pressed="false"
+      >
+        <svg
+          viewBox="0 0 32 32"
+          aria-hidden="true"
+          focusable="false"
+          shape-rendering="crispEdges"
+        >
+          <path fill="#c5797b" d="M5 4h7v9H5zM21 4h7v9h-7z" />
+          <path fill="#da9290" d="M4 10h25v18H4zM6 5h5v5H6zM22 5h5v5h-5z" />
+          <path fill="#e6a8a3" d="M6 11h21v3H6z" />
+          <path fill="#c5797b" d="M9 20h16v8H9z" />
+          <path fill="#915457" d="M12 22h3v3h-3zM19 22h3v3h-3z" />
+          <path fill="#fff1df" d="M7 15h5v5H7zM22 15h5v5h-5z" />
+          <path fill="#252d28" d="M9 15h3v4H9zM22 15h3v4h-3z" />
+        </svg>
+        <span>Pig</span>
+      </button>
+      <button
+        class="animal-button"
+        type="button"
+        data-animal="cow"
+        aria-label="Follow cow"
+        aria-pressed="false"
+      >
+        <svg
+          viewBox="0 0 32 32"
+          aria-hidden="true"
+          focusable="false"
+          shape-rendering="crispEdges"
+        >
+          <path fill="#b48c66" d="M7 3h4v9H7zM22 3h4v9h-4z" />
+          <path fill="#303430" d="M2 11h8v6H2zM24 11h7v6h-7z" />
+          <path fill="#e6ddc6" d="M8 9h18v18H8zM3 12h4v2H3zM26 12h4v2h-4z" />
+          <path fill="#303430" d="M8 10h8v9H8zM22 9h4v5h-4z" />
+          <path fill="#c5797b" d="M6 21h22v8H6z" />
+          <path fill="#70412d" d="M10 24h3v2h-3zM22 24h3v2h-3z" />
+          <path fill="#f8f0d9" d="M10 14h4v5h-4z" />
+          <path fill="#141b1b" d="M11 15h2v3h-2zM21 15h3v4h-3z" />
+        </svg>
+        <span>Cow</span>
+      </button>
+      <button
+        class="animal-button"
+        type="button"
+        data-animal="sheep"
+        aria-label="Follow sheep"
+        aria-pressed="false"
+      >
+        <svg
+          viewBox="0 0 32 32"
+          aria-hidden="true"
+          focusable="false"
+          shape-rendering="crispEdges"
+        >
+          <path fill="#cac8b8" d="M6 6h21v22H6zM3 11h27v11H3z" />
+          <path fill="#ded9c5" d="M9 3h15v5H9zM4 7h25v9H4zM7 21h20v7H7z" />
+          <path fill="#68675b" d="M10 12h14v17H10zM4 15h7v5H4zM23 15h7v5h-7z" />
+          <path fill="#e9e5d2" d="M9 8h16v7H9zM11 16h4v5h-4zM20 16h4v5h-4z" />
+          <path fill="#252d28" d="M12 17h2v3h-2zM20 17h2v3h-2z" />
+          <path fill="#b48c66" d="M13 25h8v3h-8z" />
+        </svg>
+        <span>Sheep</span>
+      </button>
+      <button
+        class="animal-button"
+        type="button"
+        data-animal="chicken"
+        aria-label="Follow chicken"
+        aria-pressed="false"
+      >
+        <svg
+          viewBox="0 0 32 32"
+          aria-hidden="true"
+          focusable="false"
+          shape-rendering="crispEdges"
+        >
+          <path fill="#b94938" d="M12 3h4v7h-4zM16 2h4v8h-4zM20 4h4v6h-4z" />
+          <path fill="#ece6ce" d="M8 9h19v19H8zM5 17h5v11H5z" />
+          <path fill="#cac8b8" d="M8 25h19v4H8z" />
+          <path fill="#252d28" d="M22 13h3v4h-3z" />
+          <path fill="#d9a044" d="M18 18h13v6H18z" />
+          <path fill="#b94938" d="M17 24h6v7h-6z" />
+          <path fill="#f9f1d9" d="M22 13h1v1h-1z" />
+        </svg>
+        <span>Chicken</span>
+      </button>
+    </nav>
+    <div class="stats">
+      <canvas
+        id="course-map"
+        width="140"
+        height="112"
+        aria-label="Track map showing all five animals and the focused animal"
+      ></canvas>
+    </div>
+    <nav class="toolbar" aria-label="Scene controls">
+      <button id="pause" aria-pressed="false">Pause</button>
+      <label class="speed" for="speed">
+        PACE
+        <input
+          id="speed"
+          type="range"
+          min="6"
+          max="13"
+          value="8.5"
+          step="0.1"
+        />
+        <output id="pace" for="speed">8.5 m/s</output>
+      </label>
+      <button id="slow" aria-pressed="false">Slow motion</button>
+      <select id="view" aria-label="Camera view">
+        <option value="three">Three-quarter</option>
+        <option value="side">Side view</option>
+        <option value="chase">Follow behind</option>
+        <option value="wide">Track view</option>
+      </select>
+      <button id="reset">Reset view</button>
+      <button id="fullscreen" aria-pressed="false">Fullscreen</button>
+    </nav>
+    <div id="notice" role="status" hidden></div>
+    <div id="status" role="status">Building the open country…</div>
+
+    <script type="module" src="script.js"></script>
+  </body>
+</html>

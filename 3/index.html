@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Board Motion</title>
+    <!-- Process notes: The development of Board Motion with Claude, including the experiments, failures, physics and iterations. https://www.linkedin.com/pulse/board-motion-luis-alberto-martinez-riancho-ikvre/ -->
+    <link rel="stylesheet" href="style.css" />
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js" />
+    <link rel="modulepreload" href="board.js" />
+    <link rel="modulepreload" href="tricks.js" />
+</head>
+
+<body>
+    <main class="lab" id="lab">
+        <div class="stage" id="stage">
+            <canvas id="scene" aria-label="3D skateboard performing the selected trick" role="img"></canvas>
+            <div class="fallback" id="fallback" hidden role="status">
+                <p>3D graphics could not start. The trick list and timeline are still available. Reload the page to retry WebGL.</p>
+            </div>
+        </div>
+
+        <div class="toast" id="toast" role="status" aria-live="polite">
+            <p class="toast__box" id="toastBox"></p>
+        </div>
+
+        <header class="head">
+            <h1 class="head__title">Board Motion</h1>
+            <button class="head__video" id="videoBtn" type="button" aria-haspopup="dialog" title="A short video of what the experiment does">Features video</button>
+            <a class="head__video" id="notesLink" href="https://www.linkedin.com/pulse/board-motion-luis-alberto-martinez-riancho-ikvre/" target="_blank" rel="noopener" title="The long account of how this was made, on LinkedIn (opens in a new tab)">Process notes</a>
+        </header>
+
+        <nav class="tricks" aria-label="Tricks">
+            <h2 class="views__title"><button class="panel-toggle" type="button" id="tricksToggle" aria-expanded="true" aria-controls="trickList" title="Show or hide the list of tricks">Tricks</button></h2>
+            <ol class="tricks__list" id="trickList"></ol>
+            <label class="tricks__menu">
+                <span>Trick</span>
+                <select id="trickSelect" aria-label="Trick"></select>
+            </label>
+        </nav>
+
+        <nav class="views" aria-label="Views">
+            <h2 class="views__title"><button class="panel-toggle" type="button" id="viewsToggle" aria-expanded="true" aria-controls="viewsBody" title="Show or hide the views">Views</button></h2>
+            <div class="views__body" id="viewsBody">
+                <ol class="tricks__list" id="presetList"></ol>
+                <label class="tricks__menu">
+                    <span>View</span>
+                    <select id="presetSelect" aria-label="View"></select>
+                </label>
+            </div>
+        </nav>
+
+        <section class="info" aria-live="polite">
+            <h2 class="info__name"><button class="panel-toggle" type="button" id="infoToggle" aria-expanded="true" aria-controls="infoBody" title="Show or hide the description"><span id="trickName"></span></button></h2>
+            <div class="info__body" id="infoBody">
+                <p class="info__note" id="trickNote"></p>
+                <p class="info__view" id="viewNote" hidden></p>
+                <p class="info__view" id="attemptNote" hidden></p>
+                <p class="info__readout" id="readout" aria-hidden="true"></p>
+            </div>
+        </section>
+
+        <section class="transport" aria-label="Playback">
+            <button class="btn btn--play" id="playBtn" type="button" aria-label="Play" title="Play / pause (Space)">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-play" d="M8 5.5v13l10.5-6.5z" /><path class="i-pause" d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z" /><path class="i-replay" d="M12 5a7 7 0 1 1-6.6 4.7l1.9.6A5 5 0 1 0 12 7v2.8L7.6 6 12 2.2z" /></svg>
+            </button>
+
+            <div class="timeline">
+                <div class="timeline__markers" id="markers" aria-hidden="true"></div>
+                <input class="timeline__range" id="scrub" type="range" min="0" max="1000" step="1" value="0" aria-label="Timeline position" />
+                <div class="timeline__meta">
+                    <span id="phaseLabel">Approach</span>
+                    <span id="timeLabel">0.00 s / 0.00 s</span>
+                </div>
+            </div>
+
+            <div class="speed" role="radiogroup" aria-label="Playback speed">
+                <button class="btn" type="button" role="radio" data-speed="ramp" aria-checked="true" title="The pop slowed a little, the flight in slow motion, real time again from the catch">Ramp</button>
+                <button class="btn" type="button" role="radio" data-speed="custom" aria-checked="false" title="Like Ramp, with the slow motion where you put it: drag the two marks on the timeline">Custom</button>
+                <button class="btn" type="button" role="radio" data-speed="1" aria-checked="false">1×</button>
+                <button class="btn" type="button" role="radio" data-speed="0.25" aria-checked="false">¼×</button>
+                <button class="btn" type="button" role="radio" data-speed="0.1" aria-checked="false">⅒×</button>
+            </div>
+
+            <div class="mode" role="radiogroup" aria-label="Attempts">
+                <button class="btn" type="button" role="radio" id="attemptOff" aria-checked="true" title="The trick done perfectly: it lands clean every time">Clean Run</button>
+                <button class="btn step" type="button" id="attemptPrev" disabled aria-label="Previous variation" title="Previous variation ([)">‹</button>
+                <button class="btn" type="button" role="radio" id="attemptNew" aria-checked="false" title="The trick as real attempts: each one different, and they do not always land (N)">Variations</button>
+                <button class="btn step" type="button" id="attemptNext" disabled aria-label="Next variation" title="Next variation (])">›</button>
+                <button class="btn" type="button" role="radio" id="attemptCombo" aria-checked="false" title="Two or three tricks in one run, each starting from where the one before it left the board">Combos</button>
+            </div>
+
+            <div class="tools">
+                <button class="btn" type="button" id="strobeBtn" aria-pressed="false" title="Show several exposures of the flight (S)">Strobe</button>
+                <button class="btn" type="button" id="viewBtn" disabled title="Put the camera back without stopping playback (V, or double-click the board)">Reset View</button>
+                <button class="btn" type="button" id="resetBtn" title="Everything back as it starts: clean run, Ramp, default view (Home)">Reset</button>
+            </div>
+        </section>
+    </main>
+
+    <dialog class="video" id="videoDialog" aria-labelledby="videoTitle">
+        <div class="video__bar">
+            <h2 class="video__title" id="videoTitle">Board Motion · Features video</h2>
+            <button class="video__close" id="videoClose" type="button">Close</button>
+        </div>
+        <video class="video__player" id="videoPlayer" controls playsinline preload="none" src="https://www.lessrain.com/dev/board-motion/board-motion-v2-web-1080.mp4"></video>
+    </dialog>
+    <script type="module" src="script.js"></script>
+</body>
+
+</html>

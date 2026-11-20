@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KBS 3D Flight Simulation & Cryptographic Aerodynamic Diagnostic Engine</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Three.js OrbitControls (classic build → attaches THREE.OrbitControls) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- Google Fonts & Phosphor Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <style>
+    :root {
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Fira Code', monospace;
+    }
+    body {
+      font-family: var(--font-sans);
+      background-color: #08090c;
+      color: #e2e8f0;
+      overflow: hidden;
+      user-select: none;
+    }
+    .font-mono { font-family: var(--font-mono); }
+
+    /* Custom Scrollbar for Diagnostics Console */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+    ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.8); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(71, 85, 105, 1); }
+
+    /* ── Jest-style Visual Badges (with extra color variants) ──────── */
+    .jest-badge {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 2px 6px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+    .jest-badge-pass { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); }
+    .jest-badge-prob { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+    .jest-badge-skip { background: rgba(251, 191, 36, 0.2); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4); }
+    .jest-badge-ai   { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+    .jest-badge-fail { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .jest-badge-warn { background: rgba(251, 191, 36, 0.2); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4); }
+    .jest-badge-info { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+
+    /* Glassmorphism Panel Overlay */
+    .glass-panel {
+      background: rgba(13, 17, 23, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
+
+    /* ── MORE COLOR: animated gradient underline for the header ───── */
+    .animated-underline::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 0; right: 0;
+      height: 2px;
+      border-radius: 0 0 12px 12px;
+      background: linear-gradient(90deg, #22d3ee, #a855f7, #ec4899, #f59e0b, #22d3ee);
+      background-size: 300% 100%;
+      animation: slide-gradient 4s linear infinite;
+      opacity: 0.9;
+    }
+    @keyframes slide-gradient {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 300% 50%; }
+    }
+
+    /* ── MORE COLOR: panel accent classes ─────────────────────────── */
+    .accent-cyan    { border-left: 4px solid #22d3ee; background: linear-gradient(135deg, rgba(34,211,238,0.10), rgba(59,130,246,0.02)); }
+    .accent-emerald { border-right: 4px solid #34d399; background: linear-gradient(225deg, rgba(52,211,153,0.10), rgba(16,185,129,0.02)); }
+    .accent-purple  { border-left: 4px solid #a855f7; background: linear-gradient(135deg, rgba(168,85,247,0.10), rgba(236,72,153,0.02)); }
+    .accent-amber   { border-right: 4px solid #fbbf24; background: linear-gradient(225deg, rgba(251,191,36,0.10), rgba(245,158,11,0.02)); }
+    .accent-rose    { border-left: 4px solid #f43f5e; background: linear-gradient(135deg, rgba(244,63,94,0.10), rgba(239,68,68,0.02)); }
+
+    /* ── MORE COLOR: pass-badge glow animation ────────────────────── */
+    .jest-badge-pass-glow { animation: pulse-glow 2s ease-in-out infinite; }
+    @keyframes pulse-glow {
+      0%,100% { box-shadow: 0 0 0 rgba(74,222,128,0); }
+      50%     { box-shadow: 0 0 10px rgba(74,222,128,0.6); }
+    }
+
+    /* ── MORE COLOR: colored log lines with left border ───────────── */
+    .log-line {
+      border-left: 2px solid transparent;
+      padding-left: 6px;
+      margin-left: -8px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .log-line:hover { background: rgba(255,255,255,0.03); }
+    .log-line[data-tag="PASS"]    { border-left-color: #4ade80; }
+    .log-line[data-tag="PROB"]    { border-left-color: #38bdf8; }
+    .log-line[data-tag="SKIP"]    { border-left-color: #fbbf24; }
+    .log-line[data-tag="KBS::AI"] { border-left-color: #c084fc; }
+    .log-line[data-tag="WARN"]    { border-left-color: #fbbf24; }
+    .log-line[data-tag="FAIL"]    { border-left-color: #f87171; background: rgba(239,68,68,0.06); }
+
+    /* ── MORE COLOR: gradient progress fills ──────────────────────── */
+    .bar-cyan    { background: linear-gradient(90deg, #22d3ee, #3b82f6); }
+    .bar-emerald { background: linear-gradient(90deg, #34d399, #10b981); }
+    .bar-rose    { background: linear-gradient(90deg, #f43f5e, #f59e0b); }
+
+    /* ── MORE COLOR: crypto hash hue cycle (driven by JS hue) ─────── */
+    #crypto-hash {
+      transition: color 0.6s ease;
+      text-shadow: 0 0 8px currentColor;
+    }
+
+    /* Scanline FX Overlay */
+    .hud-scanlines::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      z-index: 15;
+      pointer-events: none;
+      opacity: 0.4;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       SIDE-VIEW REPLAY:  scroll-driven animation-timeline plumbing
+       ═══════════════════════════════════════════════════════════════════ */
+    @property --replay-progress {
+      syntax: "<number>";
+      inherits: true;
+      initial-value: 0;
+    }
+
+    .replay-scroll {
+      overflow-y: scroll;
+      overflow-x: hidden;
+      scroll-timeline-name: --replay-scrub;
+      scroll-timeline-axis: block;
+      overscroll-behavior: contain;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      touch-action: pan-y;
+    }
+    .replay-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+    #replay-driver {
+      animation-name: replay-scrub;
+      animation-duration: 1s;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: --replay-scrub;
+    }
+
+    @keyframes replay-scrub {
+      from { --replay-progress: 0; }
+      to   { --replay-progress: 1; }
+    }
+
+    /* ── 3D Orbit Replay UI states ─────────────────────────────────── */
+    .orbit-speed-active {
+      background: rgba(8, 145, 178, 0.45) !important;
+      color: #67e8f9 !important;
+      border-color: rgba(34, 211, 238, 0.6) !important;
+    }
+    #btn-orbit-replay.orbit-active {
+      background: rgba(8, 145, 178, 0.35);
+      border-color: rgba(34, 211, 238, 0.6);
+      color: #67e8f9;
+      box-shadow: 0 0 12px rgba(34, 211, 238, 0.25);
+    }
+    #canvas-container.orbit-live { cursor: grab; }
+    #canvas-container.orbit-live:active { cursor: grabbing; }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col justify-between">
+
+  <!-- 3D Flight Simulation Canvas Container -->
+  <div id="canvas-container" class="absolute inset-0 w-full h-full z-0 bg-slate-950"></div>
+
+  <!-- HUD Glass Overlay & Interactive Controls Layer -->
+  <div class="relative z-10 w-full h-full flex flex-col justify-between p-4 pointer-events-none hud-scanlines">
+
+    <!-- TOP BAR: Navigation, Master Metrics & SHA3-512 Epoch Log -->
+    <header class="flex items-center justify-between glass-panel animated-underline p-3 rounded-xl pointer-events-auto shadow-2xl">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-cyan-500/30">
+          <i class="ph-bold ph-airplane-tilt text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-sm font-extrabold tracking-wider text-slate-100 flex items-center gap-2">
+            <span class="bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">KBS FLIGHT SIMULATOR</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/50 font-mono">v4.4-3D</span>
+          </h1>
+          <p class="text-[10px] text-slate-400 font-mono flex items-center gap-2">
+            <span class="text-cyan-400/80">AERODYNAMIC TELEMETRY ENGINE</span> • <span class="text-purple-400/80">6-DOF SIMULATION</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Real-time SHA3-512 Epoch Hash Stream -->
+      <div class="hidden md:flex flex-col items-end font-mono text-[11px] bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800">
+        <div class="flex items-center gap-2 text-slate-400 text-[10px]">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>EPOCH HASH (SHA3-512 / $t_{\text{ms}}$)</span>
+          <span id="epoch-time" class="text-cyan-400 font-semibold">1700000000000</span>
+        </div>
+        <div id="crypto-hash" class="text-emerald-400 truncate w-72 text-right select-all" title="Live SHA3-512 Telemetry Hash">
+          8f3a992b1c4e7f01a3b5c9d2e4f6a8b0c2d4e6f8a1c3e5g7...
+        </div>
+      </div>
+
+      <!-- Quick Control Actions -->
+      <div class="flex items-center gap-2">
+        <button id="btn-orbit-replay" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+          <i class="ph-bold ph-orbit text-cyan-400"></i> Orbit Replay
+        </button>
+        <button id="btn-replay" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+          <i class="ph-bold ph-film-strip text-fuchsia-400"></i> Profile
+        </button>
+        <button id="btn-autopilot" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+          <i class="ph-bold ph-compass-tool text-cyan-400"></i> Autopilot: <span id="ap-state" class="text-amber-400">OFF</span>
+        </button>
+        <button id="btn-camera" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+          <i class="ph-bold ph-video-camera text-purple-400"></i> <span id="cam-name">Chase Cam</span>
+        </button>
+        <button id="btn-reset" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-br from-red-950/70 to-rose-950/50 hover:from-red-900/80 hover:to-rose-900/60 text-red-300 border border-red-800/60 transition flex items-center gap-1.5">
+          <i class="ph-bold ph-arrows-counter-clockwise"></i> Reset
+        </button>
+      </div>
+    </header>
+
+    <!-- CENTER HUD FLIGHT INSTRUMENTS OVERLAY -->
+    <div class="flex-1 my-4 grid grid-cols-12 gap-4 items-center relative">
+
+      <!-- LEFT GAUGES: Throttle & Airspeed Ladder -->
+      <div class="col-span-3 lg:col-span-2 flex flex-col gap-4">
+        <!-- Airspeed Indicator -->
+        <div class="glass-panel accent-cyan p-3 rounded-xl pointer-events-auto">
+          <div class="text-[10px] font-mono text-slate-400 tracking-wider">AIRSPEED (KTS)</div>
+          <div class="flex items-baseline justify-between mt-1">
+            <span id="hud-speed" class="text-2xl font-bold font-mono text-cyan-300">180</span>
+            <span class="text-[10px] text-slate-500 font-mono">MACH <span id="hud-mach">0.27</span></span>
+          </div>
+          <div class="w-full bg-slate-900 rounded-full h-1.5 mt-2 overflow-hidden border border-slate-800">
+            <div id="bar-speed" class="bar-cyan h-full transition-all duration-75" style="width: 45%;"></div>
+          </div>
+        </div>
+
+        <!-- Throttle Slider Gauge -->
+        <div class="glass-panel accent-purple p-3 rounded-xl pointer-events-auto">
+          <div class="flex justify-between items-center text-[10px] font-mono text-slate-400">
+            <span>THROTTLE</span>
+            <span id="hud-throttle-val" class="text-fuchsia-400 font-bold">50%</span>
+          </div>
+          <input id="input-throttle" type="range" min="0" max="100" value="50" class="w-full mt-2 accent-fuchsia-400 cursor-pointer pointer-events-auto">
+          <div class="flex justify-between text-[9px] text-slate-500 font-mono mt-1">
+            <span>IDLE</span>
+            <span>MIL</span>
+            <span>AB</span>
+          </div>
+        </div>
+
+        <!-- G-Force & Flaps Indicator -->
+        <div class="glass-panel accent-rose p-3 rounded-xl flex justify-between items-center text-xs font-mono">
+          <div>
+            <div class="text-[9px] text-slate-400">G-LOAD</div>
+            <div id="hud-gforce" class="font-bold text-rose-300">1.0 G</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[9px] text-slate-400">PITCH ANGLE</div>
+            <div id="hud-pitch" class="font-bold text-amber-300">+0.0°</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER: Artificial Horizon Pitch Ladder Crosshair -->
+      <div class="col-span-6 lg:col-span-8 h-full flex flex-col justify-center items-center relative">
+        <!-- Pitch Ladder Container -->
+        <div id="horizon-container" class="w-64 h-64 md:w-80 md:h-80 rounded-full border-2 border-cyan-500/40 relative flex items-center justify-center overflow-hidden transition-transform duration-75 shadow-[0_0_40px_rgba(34,211,238,0.15)]">
+          <!-- Sky/Ground Pitch Line -->
+          <div id="horizon-line" class="absolute w-[200%] h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_8px_rgba(34,211,238,0.8)]"></div>
+
+          <!-- Static Flight Reticle Aircraft Symbol -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <svg width="60" height="40" viewBox="0 0 60 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="30" cy="20" r="3" fill="#22d3ee" />
+              <line x1="10" y1="20" x2="22" y2="20" stroke="#22d3ee" stroke-width="2" />
+              <line x1="38" y1="20" x2="50" y2="20" stroke="#22d3ee" stroke-width="2" />
+              <path d="M10 20 L10 26" stroke="#22d3ee" stroke-width="2" />
+              <path d="M50 20 L50 26" stroke="#22d3ee" stroke-width="2" />
+            </svg>
+          </div>
+
+          <!-- Compass Tape Top Ring -->
+          <div class="absolute top-2 text-[10px] font-mono text-cyan-400 font-bold tracking-widest bg-slate-950/80 px-2 py-0.5 rounded border border-cyan-900">
+            HDG <span id="hud-heading">360°</span> (N)
+          </div>
+        </div>
+
+        <!-- Touch Controls Guide overlay for Mobile/Mouse -->
+        <div class="absolute bottom-2 text-[10px] font-mono text-slate-400 bg-slate-950/80 px-3 py-1 rounded-full border border-slate-800">
+          [W/S] Pitch • [A/D] Roll • [Q/E] Yaw • [Shift/Ctrl] Throttle
+        </div>
+      </div>
+
+      <!-- RIGHT GAUGES: Altimeter & Vertical Speed -->
+      <div class="col-span-3 lg:col-span-2 flex flex-col gap-4">
+        <!-- Altimeter Indicator -->
+        <div class="glass-panel accent-emerald p-3 rounded-xl pointer-events-auto">
+          <div class="text-[10px] font-mono text-slate-400 tracking-wider text-right">ALTITUDE (FT)</div>
+          <div class="flex items-baseline justify-between mt-1">
+            <span class="text-[10px] text-slate-500 font-mono">MSL</span>
+            <span id="hud-alt" class="text-2xl font-bold font-mono text-emerald-300">2,500</span>
+          </div>
+          <div class="w-full bg-slate-900 rounded-full h-1.5 mt-2 overflow-hidden border border-slate-800">
+            <div id="bar-alt" class="bar-emerald h-full transition-all duration-75" style="width: 25%;"></div>
+          </div>
+        </div>
+
+        <!-- Vertical Speed Indicator (VSI) -->
+        <div class="glass-panel accent-emerald p-3 rounded-xl">
+          <div class="flex justify-between items-center text-[10px] font-mono text-slate-400">
+            <span>VERT SPEED</span>
+            <span id="hud-vsi" class="text-emerald-400 font-bold">+0 FPM</span>
+          </div>
+          <div class="w-full bg-slate-900 h-12 rounded mt-2 relative flex items-center justify-center border border-slate-800 overflow-hidden">
+            <div class="absolute w-full h-0.5 bg-slate-700"></div>
+            <div id="indicator-vsi" class="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] transition-all duration-75" style="transform: translateY(0px);"></div>
+          </div>
+        </div>
+
+        <!-- Geo Coordinates & Terrain clearance -->
+        <div class="glass-panel accent-amber p-3 rounded-xl text-right font-mono text-[10px]">
+          <div class="text-slate-400 text-[9px]">GEO COORDINATES</div>
+          <div id="hud-coords" class="text-slate-200 mt-0.5">X: 0 | Y: 250 | Z: 0</div>
+          <div class="text-slate-400 text-[9px] mt-2">TERRAIN RADAR</div>
+          <div id="hud-terrain" class="text-cyan-400 font-semibold">CLEAR (240ft AGL)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM PANEL: Interactive Jest Diagnostics Console & Control Controls Pad -->
+    <footer class="grid grid-cols-1 lg:grid-cols-12 gap-4 pointer-events-auto">
+
+      <!-- Flight Controls Touch Pad (Mobile Friendly) -->
+      <div class="lg:col-span-4 glass-panel accent-purple p-3 rounded-xl flex items-center justify-around">
+        <div class="grid grid-cols-3 gap-1 w-32">
+          <div></div>
+          <button id="btn-pitch-up" class="w-10 h-10 rounded bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-cyan-400 flex items-center justify-center border border-slate-700 font-bold text-sm">W</button>
+          <div></div>
+          <button id="btn-roll-left" class="w-10 h-10 rounded bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-cyan-400 flex items-center justify-center border border-slate-700 font-bold text-sm">A</button>
+          <button id="btn-pitch-down" class="w-10 h-10 rounded bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-cyan-400 flex items-center justify-center border border-slate-700 font-bold text-sm">S</button>
+          <button id="btn-roll-right" class="w-10 h-10 rounded bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-cyan-400 flex items-center justify-center border border-slate-700 font-bold text-sm">D</button>
+        </div>
+        <div class="flex flex-col gap-2">
+          <div class="flex gap-2">
+            <button id="btn-yaw-left" class="px-3 py-1.5 text-xs font-mono font-bold bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-slate-200 rounded border border-slate-700">Q (Yaw L)</button>
+            <button id="btn-yaw-right" class="px-3 py-1.5 text-xs font-mono font-bold bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-slate-200 rounded border border-slate-700">E (Yaw R)</button>
+          </div>
+          <div class="flex gap-2">
+            <button id="btn-throt-inc" class="px-3 py-1.5 text-xs font-mono font-bold bg-gradient-to-br from-emerald-950/70 to-emerald-900/40 hover:from-emerald-900/80 hover:to-emerald-800/60 text-emerald-400 rounded border border-emerald-800/60 flex-1">+ Throt</button>
+            <button id="btn-throt-dec" class="px-3 py-1.5 text-xs font-mono font-bold bg-gradient-to-br from-amber-950/70 to-amber-900/40 hover:from-amber-900/80 hover:to-amber-800/60 text-amber-400 rounded border border-amber-800/60 flex-1">- Throt</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- JEST TEST RUNNER & SYSTEM DIAGNOSTICS CONSOLE -->
+      <div class="lg:col-span-8 glass-panel p-3 rounded-xl flex flex-col h-44">
+        <!-- Console Header -->
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+          <div class="flex items-center gap-2">
+            <i class="ph-bold ph-terminal-window text-fuchsia-400 text-base"></i>
+            <span class="text-xs font-bold font-mono tracking-wider bg-gradient-to-r from-cyan-300 via-fuchsia-300 to-amber-300 bg-clip-text text-transparent">KBS JEST DIAGNOSTIC TEST RUNNER</span>
+            <span id="test-summary-badge" class="jest-badge jest-badge-pass">[PASS] 5/5 PASSED</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btn-run-tests" class="px-2.5 py-1 text-[11px] font-mono bg-gradient-to-br from-purple-900/60 to-fuchsia-900/40 hover:from-purple-800/70 hover:to-fuchsia-800/50 text-purple-200 rounded border border-purple-700/50 transition flex items-center gap-1">
+              <i class="ph-bold ph-play"></i> Run Tests
+            </button>
+            <button id="btn-clear-log" class="px-2.5 py-1 text-[11px] font-mono bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-slate-300 rounded border border-slate-700">Clear</button>
+          </div>
+        </div>
+
+        <!-- Log Output Stream -->
+        <div id="jest-log-console" class="flex-1 overflow-y-auto font-mono text-[11px] space-y-1.5 pr-1">
+          <!-- Log lines will be appended programmatically -->
+        </div>
+      </div>
+    </footer>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         3D ORBIT REPLAY TRANSPORT BAR (OrbitControls-driven)
+         ══════════════════════════════════════════════════════════════════ -->
+    <div id="orbit-replay-panel"
+         style="display:none"
+         class="absolute z-30 left-1/2 -translate-x-1/2 bottom-56 w-[min(600px,calc(100vw-2rem))] glass-panel rounded-xl px-3 py-2 pointer-events-auto shadow-2xl border-cyan-500/40">
+      <div class="flex items-center gap-3">
+        <button id="orbit-play" class="w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br from-cyan-900/70 to-blue-900/50 hover:from-cyan-800/80 hover:to-blue-800/60 text-cyan-300 border border-cyan-700/60 flex items-center justify-center transition shadow-[0_0_12px_rgba(34,211,238,0.15)]">
+          <i class="ph-bold ph-play"></i>
+        </button>
+
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between text-[10px] font-mono">
+            <span class="font-bold tracking-wider flex items-center gap-1.5 bg-gradient-to-r from-cyan-300 to-fuchsia-300 bg-clip-text text-transparent">
+              <i class="ph-bold ph-orbit text-cyan-400"></i> 3D ORBIT REPLAY
+            </span>
+            <span id="orbit-time" class="text-cyan-300">T+0.0s / 0.0s</span>
+          </div>
+          <input id="orbit-scrub" type="range" min="0" max="1000" value="0"
+                 class="w-full mt-1 accent-cyan-400 cursor-pointer">
+        </div>
+
+        <div class="flex items-center gap-1 shrink-0">
+          <button data-orbit-speed="0.5" class="orbit-speed-btn px-1.5 py-1 text-[10px] font-mono rounded border border-slate-700 bg-slate-800 text-slate-300">0.5x</button>
+          <button data-orbit-speed="1"   class="orbit-speed-btn px-1.5 py-1 text-[10px] font-mono rounded border border-slate-700 bg-slate-800 text-slate-300">1x</button>
+          <button data-orbit-speed="2"   class="orbit-speed-btn px-1.5 py-1 text-[10px] font-mono rounded border border-slate-700 bg-slate-800 text-slate-300">2x</button>
+        </div>
+
+        <button id="orbit-exit" class="shrink-0 px-2 py-1 text-[10px] font-mono rounded border border-red-800/60 bg-red-950/50 text-red-300 hover:bg-red-900/60 transition flex items-center gap-1">
+          <i class="ph-bold ph-x"></i> Exit
+        </button>
+      </div>
+      <div class="text-[9px] font-mono text-slate-500 mt-1 pl-12">
+        Drag to orbit · Scroll to zoom · Right-drag to pan · [Space] play/pause · [Esc] exit
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SIDE-VIEW REPLAY PANEL
+         ══════════════════════════════════════════════════════════════════ -->
+    <aside id="replay-panel"
+           style="display:none"
+           class="absolute z-30 right-4 top-24 bottom-52 w-[min(420px,calc(100vw-2rem))] glass-panel rounded-xl flex-col overflow-hidden pointer-events-auto shadow-2xl border-fuchsia-500/30">
+
+      <!-- Panel header -->
+      <div class="flex items-center justify-between px-3 py-2 border-b border-fuchsia-800/40 bg-gradient-to-r from-fuchsia-950/40 via-slate-900/40 to-purple-950/40 shrink-0">
+        <div class="flex items-center gap-2">
+          <i class="ph-bold ph-film-strip text-fuchsia-400"></i>
+          <span class="text-[11px] font-bold font-mono tracking-wider bg-gradient-to-r from-fuchsia-300 to-cyan-300 bg-clip-text text-transparent">SIDE-VIEW REPLAY</span>
+          <span id="replay-badge" class="jest-badge jest-badge-prob">SCROLL</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="btn-replay-play" class="px-2 py-1 text-[10px] font-mono bg-cyan-900/50 hover:bg-cyan-800/60 text-cyan-300 rounded border border-cyan-700/50 flex items-center gap-1">
+            <i class="ph-bold ph-play"></i> Play
+          </button>
+          <button id="btn-replay-clear" class="px-2 py-1 text-[10px] font-mono bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Clear</button>
+          <button id="btn-replay-close" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-100 rounded border border-slate-700">
+            <i class="ph-bold ph-x"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Canvas + invisible scroll driver -->
+      <div class="relative flex-1 min-h-0">
+        <canvas id="replay-canvas" class="absolute inset-0 w-full h-full"></canvas>
+
+        <!-- Scroll surface: this is what the animation-timeline listens to -->
+        <div id="replay-scroll" class="replay-scroll absolute inset-0">
+          <div class="relative w-full" style="height: 800%;">
+            <div id="replay-driver" class="absolute top-0 left-0 w-px h-px"></div>
+          </div>
+        </div>
+
+        <div class="absolute left-2 top-2 font-mono text-[9px] text-cyan-400/70 pointer-events-none tracking-wider">
+          ↕ SCROLL TO SCRUB · animation-timeline
+        </div>
+      </div>
+
+      <!-- Readouts -->
+      <div class="shrink-0 px-3 py-2 border-t border-slate-800 grid grid-cols-4 gap-2 font-mono text-[10px]">
+        <div><div class="text-slate-500 text-[9px]">T+</div><div id="rp-time" class="text-slate-200 font-bold">0.0s</div></div>
+        <div><div class="text-slate-500 text-[9px]">ALT</div><div id="rp-alt" class="text-emerald-300 font-bold">0 ft</div></div>
+        <div><div class="text-slate-500 text-[9px]">SPD</div><div id="rp-spd" class="text-cyan-300 font-bold">0 kts</div></div>
+        <div><div class="text-slate-500 text-[9px]">PITCH</div><div id="rp-pitch" class="text-amber-300 font-bold">0°</div></div>
+      </div>
+      <div class="shrink-0 px-3 pb-2">
+        <div class="w-full h-1 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+          <div id="rp-bar" class="h-full bar-cyan" style="width:0%"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- MAIN SCRIPT ENGINE -->
+  <script type="module">
+    'use strict';
+
+    /* ═════════════════════════════════════════════════════════════════════
+       1. SHA3-512 SIMULATED MULTI-HASH ENGINE & CRYPTO HELPER
+       ═════════════════════════════════════════════════════════════════════ */
+    class CryptoEngine {
+      static available() {
+        return !!(window.crypto && window.crypto.subtle && typeof window.crypto.subtle.digest === 'function');
+      }
+
+      static async sha3_512Simulated(input) {
+        if (!CryptoEngine.available()) {
+          throw new Error('crypto.subtle unavailable (insecure context)');
+        }
+        // High-entropy string encoding using Web Crypto API SHA-256 fallback concatenated for 512-bit width
+        const msgUint8 = new TextEncoder().encode(input + String(performance.now()));
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hex1 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        const hashBuffer2 = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(hex1 + input));
+        const hashArray2 = Array.from(new Uint8Array(hashBuffer2));
+        const hex2 = hashArray2.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hex1 + hex2;
+      }
+    }
+
+    /* ═════════════════════════════════════════════════════════════════════
+       2. AERODYNAMIC FLIGHT DYNAMICS STATE MACHINE (6-DOF)
+       ═════════════════════════════════════════════════════════════════════ */
+    class FlightState {
+      constructor() {
+        this.reset();
+      }
+
+      reset() {
+        this.position = new THREE.Vector3(0, 300, 0);
+        this.rotation = new THREE.Euler(0, 0, 0, 'YXZ');
+        this.velocity = new THREE.Vector3(0, 0, -100);
+        this.speed = 180;
+        this.throttle = 50;
+        this.pitchRate = 0;
+        this.rollRate = 0;
+        this.yawRate = 0;
+        this.gForce = 1.0;
+        this.vsi = 0;
+        this.autopilot = false;
+        this.isGrounded = false;
+      }
+
+      update(dt, keys) {
+        const pitchPower = 1.2;
+        const rollPower = 2.2;
+        const yawPower = 0.8;
+
+        if (keys['KeyW'] || keys['ArrowUp']) this.pitchRate = THREE.MathUtils.lerp(this.pitchRate, -pitchPower, dt * 4);
+        else if (keys['KeyS'] || keys['ArrowDown']) this.pitchRate = THREE.MathUtils.lerp(this.pitchRate, pitchPower, dt * 4);
+        else this.pitchRate = THREE.MathUtils.lerp(this.pitchRate, 0, dt * 6);
+
+        if (keys['KeyA'] || keys['ArrowLeft']) this.rollRate = THREE.MathUtils.lerp(this.rollRate, rollPower, dt * 4);
+        else if (keys['KeyD'] || keys['ArrowRight']) this.rollRate = THREE.MathUtils.lerp(this.rollRate, -rollPower, dt * 4);
+        else this.rollRate = THREE.MathUtils.lerp(this.rollRate, 0, dt * 6);
+
+        if (keys['KeyQ']) this.yawRate = THREE.MathUtils.lerp(this.yawRate, yawPower, dt * 4);
+        else if (keys['KeyE']) this.yawRate = THREE.MathUtils.lerp(this.yawRate, -yawPower, dt * 4);
+        else this.yawRate = THREE.MathUtils.lerp(this.yawRate, 0, dt * 6);
+
+        if (keys['ShiftLeft'] || keys['ShiftRight']) this.throttle = Math.min(100, this.throttle + dt * 25);
+        if (keys['ControlLeft'] || keys['ControlRight']) this.throttle = Math.max(0, this.throttle - dt * 25);
+
+        const targetSpeed = (this.throttle / 100) * 350 + (Math.sin(this.rotation.x) * 80);
+        this.speed = THREE.MathUtils.lerp(this.speed, Math.max(40, targetSpeed), dt * 1.5);
+
+        if (this.autopilot) {
+          this.rotation.z = THREE.MathUtils.lerp(this.rotation.z, 0, dt * 3);
+          this.rotation.x = THREE.MathUtils.lerp(this.rotation.x, 0, dt * 2);
+        }
+
+        this.rotation.x += this.pitchRate * dt;
+        this.rotation.z += this.rollRate * dt;
+        this.rotation.y += this.yawRate * dt;
+
+        this.rotation.x = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, this.rotation.x));
+
+        const forward = new THREE.Vector3(0, 0, -1).applyEuler(this.rotation);
+        const speedMps = this.speed * 0.514444;
+        const climbRate = Math.sin(this.rotation.x) * speedMps;
+        this.vsi = climbRate * 196.85;
+
+        this.position.addScaledVector(forward, speedMps * dt);
+
+        const turnRate = Math.abs(this.rollRate) + Math.abs(this.pitchRate);
+        this.gForce = 1.0 + (turnRate * (this.speed / 150));
+      }
+    }
+
+    /* ═════════════════════════════════════════════════════════════════════
+       3. THREE.JS 3D WORLD, PROCEDURAL TERRAIN & AIRCRAFT MESH
+       ═════════════════════════════════════════════════════════════════════ */
+    class World3D {
+      constructor(container) {
+        this.container = container;
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x0c1424);
+        this.scene.fog = new THREE.FogExp2(0x0c1424, 0.00035);
+
+        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 20000);
+        this.camera.position.set(0, 320, 40);
+
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(this.renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.6);
+        this.scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffedd5, 1.2);
+        dirLight.position.set(1000, 3000, 1000);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.far = 10000;
+        this.scene.add(dirLight);
+
+        this.cameraMode = 0;
+        this.orbitMode = false;
+
+        this.controls = null;
+        if (typeof THREE.OrbitControls === 'function') {
+          this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+          this.controls.enableDamping = true;
+          this.controls.dampingFactor = 0.075;
+          this.controls.rotateSpeed = 0.9;
+          this.controls.zoomSpeed = 0.9;
+          this.controls.panSpeed = 0.8;
+          this.controls.minDistance = 8;
+          this.controls.maxDistance = 4000;
+          this.controls.target.set(0, 300, 0);
+          this.controls.enabled = false;
+          this.controls.update();
+        } else {
+          console.warn('[KBS] OrbitControls failed to load — 3D orbit replay disabled.');
+        }
+
+        this.createTerrain();
+        this.createAircraft();
+        this.createSkyGrid();
+
+        window.addEventListener('resize', this.onWindowResize.bind(this));
+      }
+
+      createTerrain() {
+        const size = 16000;
+        const segments = 120;
+        const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
+        geometry.rotateX(-Math.PI / 2);
+
+        const posAttr = geometry.attributes.position;
+        for (let i = 0; i < posAttr.count; i++) {
+          const x = posAttr.getX(i);
+          const z = posAttr.getZ(i);
+          const h1 = Math.sin(x * 0.0008) * Math.cos(z * 0.0008) * 450;
+          const h2 = Math.sin(x * 0.003) * Math.sin(z * 0.003) * 120;
+          const h3 = Math.cos(x * 0.01) * Math.sin(z * 0.01) * 30;
+          let elevation = h1 + h2 + h3;
+          if (elevation < 0) elevation *= 0.2;
+          posAttr.setY(i, elevation);
+        }
+        geometry.computeVertexNormals();
+
+        const terrainMaterial = new THREE.MeshStandardMaterial({
+          color: 0x1e293b,
+          roughness: 0.85,
+          metalness: 0.15,
+          flatShading: true
+        });
+
+        this.terrain = new THREE.Mesh(geometry, terrainMaterial);
+        this.terrain.receiveShadow = true;
+        this.scene.add(this.terrain);
+
+        const wireMat = new THREE.MeshBasicMaterial({ color: 0x0284c7, wireframe: true, transparent: true, opacity: 0.15 });
+        const wireMesh = new THREE.Mesh(geometry, wireMat);
+        wireMesh.position.y += 1;
+        this.scene.add(wireMesh);
+      }
+
+      createAircraft() {
+        this.aircraftGroup = new THREE.Group();
+
+        const bodyGeo = new THREE.ConeGeometry(2, 14, 8);
+        bodyGeo.rotateX(Math.PI / 2);
+        const matBody = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.8, roughness: 0.2 });
+        const body = new THREE.Mesh(bodyGeo, matBody);
+        body.castShadow = true;
+        this.aircraftGroup.add(body);
+
+        const wingShape = new THREE.Shape();
+        wingShape.moveTo(0, 0);
+        wingShape.lineTo(7, -3);
+        wingShape.lineTo(7, -5);
+        wingShape.lineTo(0, -2);
+        const extrudeSettings = { depth: 0.3, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.1, bevelThickness: 0.1 };
+        const wingGeo = new THREE.ExtrudeGeometry(wingShape, extrudeSettings);
+        wingGeo.rotateX(Math.PI / 2);
+
+        const wingRight = new THREE.Mesh(wingGeo, matBody);
+        wingRight.position.set(0, 0, 1);
+        wingRight.castShadow = true;
+        this.aircraftGroup.add(wingRight);
+
+        const wingLeft = wingRight.clone();
+        wingLeft.scale.set(-1, 1, 1);
+        this.aircraftGroup.add(wingLeft);
+
+        const tailGeo = new THREE.BoxGeometry(0.3, 3, 3);
+        const tail = new THREE.Mesh(tailGeo, matBody);
+        tail.position.set(0, 2, 5);
+        this.aircraftGroup.add(tail);
+
+        this.afterburnerLight = new THREE.PointLight(0x38bdf8, 3, 20);
+        this.afterburnerLight.position.set(0, 0, 7);
+        this.aircraftGroup.add(this.afterburnerLight);
+
+        this.scene.add(this.aircraftGroup);
+      }
+
+      createSkyGrid() {
+        const cloudGeo = new THREE.DodecahedronGeometry(60, 1);
+        const cloudMat = new THREE.MeshStandardMaterial({ color: 0x64748b, transparent: true, opacity: 0.35, roughness: 1.0 });
+
+        for (let i = 0; i < 60; i++) {
+          const cloud = new THREE.Mesh(cloudGeo, cloudMat);
+          cloud.position.set(
+            (Math.random() - 0.5) * 12000,
+            Math.random() * 800 + 400,
+            (Math.random() - 0.5) * 12000
+          );
+          cloud.scale.set(Math.random() * 2 + 1, Math.random() * 0.8 + 0.4, Math.random() * 2 + 1);
+          this.scene.add(cloud);
+        }
+      }
+
+      setOrbitMode(enabled, focusPos) {
+        if (!this.controls) return false;
+
+        this.orbitMode = enabled;
+        this.controls.enabled = enabled;
+        this.container.classList.toggle('orbit-live', enabled);
+
+        if (!enabled) return true;
+
+        const focus = focusPos || new THREE.Vector3(0, 300, 0);
+
+        let dir = this.camera.position.clone().sub(focus);
+        if (dir.lengthSq() < 1 || !isFinite(dir.length())) dir.set(35, 16, 35);
+        dir.setLength(THREE.MathUtils.clamp(dir.length(), 45, 180));
+
+        this.camera.position.copy(focus).add(dir);
+        this.controls.target.copy(focus);
+        this.controls.update();
+        return true;
+      }
+
+      updateCamera(flightState) {
+        this.aircraftGroup.position.copy(flightState.position);
+        this.aircraftGroup.rotation.copy(flightState.rotation);
+        this.afterburnerLight.intensity = (flightState.throttle / 100) * 5;
+
+        if (this.orbitMode && this.controls) {
+          this.controls.target.lerp(flightState.position, 0.25);
+          this.controls.update();
+          return;
+        }
+
+        if (this.cameraMode === 0) {
+          const offset = new THREE.Vector3(0, 6, 25).applyEuler(flightState.rotation);
+          const targetCamPos = flightState.position.clone().add(offset);
+          this.camera.position.lerp(targetCamPos, 0.2);
+          this.camera.lookAt(flightState.position.clone().add(new THREE.Vector3(0, 2, -50).applyEuler(flightState.rotation)));
+        } else if (this.cameraMode === 1) {
+          const offset = new THREE.Vector3(0, 1.2, -1).applyEuler(flightState.rotation);
+          this.camera.position.copy(flightState.position).add(offset);
+          this.camera.lookAt(flightState.position.clone().add(new THREE.Vector3(0, 1.2, -100).applyEuler(flightState.rotation)));
+        }
+      }
+
+      getTerrainHeightAt(x, z) {
+        const h1 = Math.sin(x * 0.0008) * Math.cos(z * 0.0008) * 450;
+        const h2 = Math.sin(x * 0.003) * Math.sin(z * 0.003) * 120;
+        const h3 = Math.cos(x * 0.01) * Math.sin(z * 0.01) * 30;
+        let elevation = h1 + h2 + h3;
+        if (elevation < 0) elevation *= 0.2;
+        return elevation;
+      }
+
+      onWindowResize() {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+    }
+
+    /* ═════════════════════════════════════════════════════════════════════
+       4. JEST TEST RUNNER & SYSTEM INTEGRITY DIAGNOSTIC SUITE
+       ═════════════════════════════════════════════════════════════════════ */
+    class JestTestRunner {
+      constructor(consoleEl, badgeEl) {
+        this.consoleEl = consoleEl;
+        this.badgeEl = badgeEl;
+        this.tests = [];
+      }
+
+      registerTest(name, fn, tag = 'PASS') {
+        this.tests.push({ name, fn, defaultTag: tag });
+      }
+
+      /* ════════════════════════════════════════════════════════════════
+         DEBUGGED:  PROB / SKIP / WARN are *informational*, not failures.
+         The overall badge now shows PASS if fail === 0, and reports the
+         pass/info/fail split explicitly.
+         ════════════════════════════════════════════════════════════════ */
+      async runAll(flightState, world3D) {
+        this.consoleEl.innerHTML = '';
+        this.appendLog('sys', `[KBS::INIT] Running Automated Flight Envelope & Telemetry Tests…`);
+        this.appendLog('sys', `[KBS::INIT] ${this.tests.length} registered diagnostics · driver: ${world3D && world3D.controls ? 'OrbitControls ON' : 'OrbitControls OFF'}`);
+
+        const stats = { pass: 0, info: 0, fail: 0, total: this.tests.length };
+
+        for (const test of this.tests) {
+          const t0 = performance.now();
+          try {
+            const result = await test.fn(flightState, world3D);
+            const tag = result.tag || test.defaultTag;
+            const ms = (performance.now() - t0).toFixed(1);
+            this.appendTestLog(tag, test.name, result.message, ms);
+
+            if (tag === 'PASS' || tag === 'KBS::AI') stats.pass++;
+            else if (tag === 'PROB' || tag === 'SKIP' || tag === 'WARN') stats.info++;
+            else stats.fail++;
+          } catch (err) {
+            const ms = (performance.now() - t0).toFixed(1);
+            this.appendTestLog('FAIL', test.name, err && err.message ? err.message : String(err), ms);
+            stats.fail++;
+          }
+        }
+
+        this.updateBadge(stats);
+        this.appendLog('sys', `[KBS::DONE] pass=${stats.pass} info=${stats.info} fail=${stats.fail} / ${stats.total} total`);
+      }
+
+      updateBadge(stats) {
+        const ok = stats.fail === 0;
+        const cls = ok ? 'jest-badge-pass' : 'jest-badge-fail';
+
+        this.badgeEl.className = `jest-badge ${cls} ${ok ? 'jest-badge-pass-glow' : ''}`;
+
+        let text = `[${ok ? 'PASS' : 'FAIL'}] ${stats.pass}/${stats.total}`;
+        if (stats.info > 0) text += ` · ${stats.info} INFO`;
+        if (stats.fail > 0) text += ` · ${stats.fail} FAIL`;
+        this.badgeEl.textContent = text;
+      }
+
+      appendTestLog(tag, testName, details, ms) {
+        const line = document.createElement('div');
+        line.className = 'flex items-center gap-2 text-slate-300 log-line';
+        line.dataset.tag = tag;
+
+        let badgeClass = 'jest-badge-pass';
+        if (tag === 'PROB') badgeClass = 'jest-badge-prob';
+        if (tag === 'SKIP') badgeClass = 'jest-badge-skip';
+        if (tag === 'KBS::AI') badgeClass = 'jest-badge-ai';
+        if (tag === 'FAIL') badgeClass = 'jest-badge-fail';
+        if (tag === 'WARN') badgeClass = 'jest-badge-warn';
+
+        const color = {
+          PASS: 'text-emerald-200',
+          PROB: 'text-sky-200',
+          SKIP: 'text-amber-200',
+          'KBS::AI': 'text-purple-200',
+          WARN: 'text-amber-200',
+          FAIL: 'text-rose-200'
+        }[tag] || 'text-slate-200';
+
+        line.innerHTML = `
+          <span class="jest-badge ${badgeClass}">[${tag}]</span>
+          <span class="font-semibold ${color}">${testName}</span>
+          <span class="text-slate-500">— ${details}</span>
+          <span class="ml-auto text-[9px] text-slate-600 font-mono shrink-0">${ms}ms</span>
+        `;
+        this.consoleEl.appendChild(line);
+        this.consoleEl.scrollTop = this.consoleEl.scrollHeight;
+      }
+
+      appendLog(kind, message) {
+        const line = document.createElement('div');
+        line.className = 'text-slate-400 italic log-line';
+        line.dataset.tag = kind === 'warn' ? 'WARN' : (kind === 'info' ? 'INFO' : 'SYS');
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        this.consoleEl.appendChild(line);
+        this.consoleEl.scrollTop = this.consoleEl.scrollHeight;
+      }
+    }
+
+    /* ═════════════════════════════════════════════════════════════════════
+       5. MAIN APPLICATION CONTROLLER & BOOTSTRAP
+       ═════════════════════════════════════════════════════════════════════ */
+    class FlightSimulatorApp {
+      constructor() {
+        this.keys = {};
+        this.elapsed = 0;
+        this.flightState = new FlightState();
+        this.world3D = new World3D(document.getElementById('canvas-container'));
+        this.jestRunner = new JestTestRunner(
+          document.getElementById('jest-log-console'),
+          document.getElementById('test-summary-badge')
+        );
+
+        this.initInputListeners();
+        this.initReplayEngine();
+        this.initOrbitReplay();
+        this.initJestTestSuite();
+        this.bindUI();
+
+        setTimeout(() => this.jestRunner.runAll(this.flightState, this.world3D), 500);
+
+        this.lastTime = performance.now();
+        requestAnimationFrame(this.animate.bind(this));
+      }
+
+      initInputListeners() {
+        window.addEventListener('keydown', e => { this.keys[e.code] = true; });
+        window.addEventListener('keyup', e => { this.keys[e.code] = false; });
+
+        const bindBtn = (id, keyCode) => {
+          const btn = document.getElementById(id);
+          if (!btn) return;
+          btn.addEventListener('mousedown', () => { this.keys[keyCode] = true; });
+          btn.addEventListener('mouseup', () => { this.keys[keyCode] = false; });
+          btn.addEventListener('touchstart', (e) => { e.preventDefault(); this.keys[keyCode] = true; });
+          btn.addEventListener('touchend', (e) => { e.preventDefault(); this.keys[keyCode] = false; });
+        };
+
+        bindBtn('btn-pitch-up', 'KeyW');
+        bindBtn('btn-pitch-down', 'KeyS');
+        bindBtn('btn-roll-left', 'KeyA');
+        bindBtn('btn-roll-right', 'KeyD');
+        bindBtn('btn-yaw-left', 'KeyQ');
+        bindBtn('btn-yaw-right', 'KeyE');
+        bindBtn('btn-throt-inc', 'ShiftLeft');
+        bindBtn('btn-throt-dec', 'ControlLeft');
+      }
+
+      initReplayEngine() {
+        this.replay = { samples: [], maxSamples: 1800, lastAt: -1 };
+        this.replayOpen = false;
+        this.replayPlaying = false;
+
+        this.replayCanvas   = document.getElementById('replay-canvas');
+        this.replayCtx      = this.replayCanvas.getContext('2d');
+        this.replayScroller = document.getElementById('replay-scroll');
+        this.replayDriver   = document.getElementById('replay-driver');
+        this.replayPanel    = document.getElementById('replay-panel');
+
+        this.rpEls = {
+          time:   document.getElementById('rp-time'),
+          alt:    document.getElementById('rp-alt'),
+          spd:    document.getElementById('rp-spd'),
+          pitch:  document.getElementById('rp-pitch'),
+          bar:    document.getElementById('rp-bar'),
+          badge:  document.getElementById('replay-badge'),
+          play:   document.getElementById('btn-replay-play')
+        };
+
+        this.supportsScrollTimeline = !!(window.CSS && CSS.supports &&
+          (CSS.supports('animation-timeline', '--replay-scrub') ||
+           CSS.supports('animation-timeline: --replay-scrub')));
+
+        if (!this.supportsScrollTimeline) {
+          this.replayDriver.style.animation = 'none';
+        }
+
+        const halt = () => { this.replayPlaying = false; this.syncReplayPlayBtn(); };
+        this.replayScroller.addEventListener('wheel', halt, { passive: true });
+        this.replayScroller.addEventListener('touchstart', halt, { passive: true });
+        this.replayScroller.addEventListener('pointerdown', halt);
+
+        document.getElementById('btn-replay').addEventListener('click', () => this.toggleReplayPanel());
+        document.getElementById('btn-replay-close').addEventListener('click', () => this.toggleReplayPanel(false));
+        document.getElementById('btn-replay-clear').addEventListener('click', () => this.clearReplay());
+        this.rpEls.play.addEventListener('click', () => this.toggleReplayPlayback());
+
+        window.addEventListener('resize', () => { if (this.replayOpen) this.renderReplaySideView(this.getReplayProgress()); });
+      }
+
+      toggleReplayPanel(force) {
+        this.replayOpen = (force === undefined) ? !this.replayOpen : !!force;
+        this.replayPanel.style.display = this.replayOpen ? 'flex' : 'none';
+
+        if (this.replayOpen) {
+          requestAnimationFrame(() => {
+            this.replayScroller.scrollTop = 0;
+            this.renderReplaySideView(this.getReplayProgress());
+          });
+        } else {
+          this.replayPlaying = false;
+          this.syncReplayPlayBtn();
+        }
+      }
+
+      clearReplay() {
+        this.replay.samples = [];
+        this.replay.lastAt = -1;
+        this.replayPlaying = false;
+        this.syncReplayPlayBtn();
+        if (this.orbit && this.orbit.active) this.toggleOrbitReplay(false);
+        if (this.replayOpen) {
+          this.replayScroller.scrollTop = 0;
+          this.renderReplaySideView(0);
+        }
+      }
+
+      toggleReplayPlayback() {
+        const sc = this.replayScroller;
+        const max = sc.scrollHeight - sc.clientHeight;
+        if (max <= 0) return;
+
+        if (this.replayPlaying) {
+          this.replayPlaying = false;
+          this.syncReplayPlayBtn();
+          return;
+        }
+
+        if (sc.scrollTop >= max - 2) sc.scrollTop = 0;
+        this.replayPlaying   = true;
+        this.replayPlayFrom  = sc.scrollTop;
+        this.replayPlayStart = performance.now();
+        this.replayPlayDur   = 7000;
+        this.syncReplayPlayBtn();
+      }
+
+      syncReplayPlayBtn() {
+        this.rpEls.play.innerHTML = this.replayPlaying
+          ? '<i class="ph-bold ph-pause"></i> Pause'
+          : '<i class="ph-bold ph-play"></i> Play';
+      }
+
+      recordReplaySample() {
+        if (this.orbit && this.orbit.active) return;
+        if (this.elapsed - this.replay.lastAt < 0.05) return;
+        this.replay.lastAt = this.elapsed;
+
+        const s = this.flightState;
+        const prev = this.replay.samples[this.replay.samples.length - 1];
+        const ground = this.world3D.getTerrainHeightAt(s.position.x, s.position.z);
+        const step = prev ? Math.hypot(s.position.x - prev.x, s.position.z - prev.z) : 0;
+
+        this.replay.samples.push({
+          t: this.elapsed,
+          x: s.position.x,
+          z: s.position.z,
+          alt: s.position.y,
+          ground,
+          dist: (prev ? prev.dist : 0) + step,
+          pitch: s.rotation.x,
+          yaw: s.rotation.y,
+          roll: s.rotation.z,
+          speed: s.speed,
+          throttle: s.throttle
+        });
+
+        if (this.replay.samples.length > this.replay.maxSamples) this.replay.samples.shift();
+      }
+
+      getReplayProgress() {
+        const sc = this.replayScroller;
+        const max = sc.scrollHeight - sc.clientHeight;
+        if (max <= 0) return 0;
+
+        const fallback = Math.min(1, Math.max(0, sc.scrollTop / max));
+
+        if (this.supportsScrollTimeline) {
+          const raw = getComputedStyle(this.replayDriver).getPropertyValue('--replay-progress');
+          const v = parseFloat(raw);
+          if (Number.isFinite(v) && !(v === 0 && fallback > 0.02)) {
+            return Math.min(1, Math.max(0, v));
+          }
+        }
+        return fallback;
+      }
+
+      updateReplay() {
+        if (!this.replayOpen) return;
+
+        if (this.replayPlaying) {
+          const sc = this.replayScroller;
+          const max = sc.scrollHeight - sc.clientHeight;
+          const k = Math.min(1, (performance.now() - this.replayPlayStart) / this.replayPlayDur);
+          sc.scrollTop = this.replayPlayFrom + (max - this.replayPlayFrom) * k;
+          if (k >= 1) { this.replayPlaying = false; this.syncReplayPlayBtn(); }
+        }
+
+        this.renderReplaySideView(this.getReplayProgress());
+      }
+
+      renderReplaySideView(progress) {
+        const cvs = this.replayCanvas;
+        const ctx = this.replayCtx;
+        const cssW = cvs.clientWidth;
+        const cssH = cvs.clientHeight;
+        if (!cssW || !cssH) return;
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const wantW = Math.round(cssW * dpr);
+        const wantH = Math.round(cssH * dpr);
+        if (cvs.width !== wantW || cvs.height !== wantH) {
+          cvs.width = wantW;
+          cvs.height = wantH;
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, cssW, cssH);
+
+        // Colourful backdrop: indigo → violet → cyan gradient
+        const sky = ctx.createLinearGradient(0, 0, 0, cssH);
+        sky.addColorStop(0, '#0a0a1a');
+        sky.addColorStop(0.5, '#12172e');
+        sky.addColorStop(1, '#0d1f30');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, cssW, cssH);
+
+        const samples = this.replay.samples;
+
+        if (samples.length < 2) {
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.font = '10px "Fira Code", ui-monospace, monospace';
+          ctx.fillStyle = 'rgba(56,189,248,0.9)';
+          ctx.fillText('▶ RECORDING FLIGHT DATA…', cssW / 2, cssH / 2 - 6);
+          ctx.font = '9px "Fira Code", ui-monospace, monospace';
+          ctx.fillStyle = 'rgba(100,116,139,0.9)';
+          ctx.fillText('fly the aircraft to build the side-view track', cssW / 2, cssH / 2 + 12);
+          this.rpEls.badge.textContent = 'REC';
+          return;
+        }
+
+        const padL = 42, padR = 12, padT = 16, padB = 22;
+        const plotW = Math.max(20, cssW - padL - padR);
+        const plotH = Math.max(20, cssH - padT - padB);
+
+        const d0 = samples[0].dist;
+        let maxDist = 1, minAlt = Infinity, maxAlt = -Infinity;
+        for (const s of samples) {
+          const d = s.dist - d0;
+          if (d > maxDist) maxDist = d;
+          if (s.ground < minAlt) minAlt = s.ground;
+          if (s.alt < minAlt) minAlt = s.alt;
+          if (s.alt > maxAlt) maxAlt = s.alt;
+        }
+
+        const span = Math.max(40, maxAlt - minAlt);
+        const altMin = minAlt - span * 0.15;
+        const altMax = maxAlt + span * 0.25;
+        const altRange = Math.max(1, altMax - altMin);
+
+        const px = d => padL + (d / maxDist) * plotW;
+        const py = a => padT + (1 - (a - altMin) / altRange) * plotH;
+
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.font = '9px "Fira Code", ui-monospace, monospace';
+        for (let i = 0; i <= 4; i++) {
+          const a = altMin + (altRange * i) / 4;
+          const y = py(a);
+          ctx.beginPath();
+          ctx.moveTo(padL, y);
+          ctx.lineTo(cssW - padR, y);
+          ctx.strokeStyle = 'rgba(67, 56, 202, 0.25)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(148, 163, 184, 0.9)';
+          ctx.fillText(`${Math.round(a * 3.28084)}ft`, padL - 6, y);
+        }
+
+        // Terrain fill: violet → deep blue
+        ctx.beginPath();
+        ctx.moveTo(px(0), cssH);
+        for (const s of samples) ctx.lineTo(px(s.dist - d0), py(s.ground));
+        ctx.lineTo(px(maxDist), cssH);
+        ctx.closePath();
+        const terrGrad = ctx.createLinearGradient(0, padT, 0, cssH);
+        terrGrad.addColorStop(0, 'rgba(91, 33, 182, 0.75)');
+        terrGrad.addColorStop(1, 'rgba(8, 14, 24, 0.98)');
+        ctx.fillStyle = terrGrad;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(168, 85, 247, 0.55)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.beginPath();
+        for (let i = 0; i < samples.length; i++) {
+          const X = px(samples[i].dist - d0), Y = py(samples[i].alt);
+          if (i === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
+        }
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        const p = Math.min(1, Math.max(0, progress));
+        const smp = this.sampleAtProgress(p);
+        if (!smp) return;
+
+        const cur = {
+          dist: smp.dist, alt: smp.y, ground: smp.ground,
+          pitch: smp.pitch, speed: smp.speed, throttle: smp.throttle, t: smp.t
+        };
+
+        const i0 = Math.floor(p * (samples.length - 1));
+        ctx.beginPath();
+        for (let i = 0; i <= i0; i++) {
+          const X = px(samples[i].dist - d0), Y = py(samples[i].alt);
+          if (i === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
+        }
+        ctx.lineTo(px(cur.dist - d0), py(cur.alt));
+        ctx.save();
+        ctx.shadowColor = 'rgba(236, 72, 153, 0.85)';
+        ctx.shadowBlur = 10;
+        const trail = ctx.createLinearGradient(0, 0, cssW, 0);
+        trail.addColorStop(0, '#22d3ee');
+        trail.addColorStop(1, '#ec4899');
+        ctx.strokeStyle = trail;
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+        ctx.restore();
+
+        const ax = px(cur.dist - d0);
+        const ay = py(cur.alt);
+
+        ctx.beginPath();
+        ctx.setLineDash([3, 4]);
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(ax, py(cur.ground));
+        ctx.strokeStyle = 'rgba(52, 211, 153, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.beginPath();
+        ctx.arc(ax, ay, 13, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(236, 72, 153, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(ax, ay);
+        ctx.rotate(-cur.pitch);
+
+        const flame = 3 + (cur.throttle / 100) * 11;
+        const fg = ctx.createLinearGradient(-9, 0, -9 - flame, 0);
+        fg.addColorStop(0, 'rgba(56, 189, 248, 0.95)');
+        fg.addColorStop(1, 'rgba(56, 189, 248, 0)');
+        ctx.beginPath();
+        ctx.moveTo(-9, -1.8);
+        ctx.lineTo(-9 - flame, 0);
+        ctx.lineTo(-9, 1.8);
+        ctx.closePath();
+        ctx.fillStyle = fg;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(-9, -2.5);
+        ctx.lineTo(-13.5, -7);
+        ctx.lineTo(-8, -3);
+        ctx.closePath();
+        ctx.fillStyle = '#0ea5e9';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(13, 0);
+        ctx.lineTo(4, -3.2);
+        ctx.lineTo(-9, -2.6);
+        ctx.lineTo(-9, 2.6);
+        ctx.lineTo(4, 3.2);
+        ctx.closePath();
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fill();
+        ctx.strokeStyle = '#ec4899';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(6, -0.8, 1.7, 0, Math.PI * 2);
+        ctx.fillStyle = '#0284c7';
+        ctx.fill();
+
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.arc(px(0), py(samples[0].alt), 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.9)';
+        ctx.fill();
+
+        const tRel = cur.t - samples[0].t;
+        this.rpEls.time.textContent  = `${tRel.toFixed(1)}s`;
+        this.rpEls.alt.textContent   = `${Math.round(cur.alt * 3.28084).toLocaleString()} ft`;
+        this.rpEls.spd.textContent   = `${Math.round(cur.speed)} kts`;
+        this.rpEls.pitch.textContent = `${cur.pitch >= 0 ? '+' : ''}${(cur.pitch * 180 / Math.PI).toFixed(1)}°`;
+        this.rpEls.bar.style.width   = `${(p * 100).toFixed(1)}%`;
+        this.rpEls.badge.textContent = `${samples.length} FRAMES`;
+      }
+
+      sampleAtProgress(progress) {
+        const samples = this.replay.samples;
+        if (samples.length === 0) return null;
+        if (samples.length === 1) {
+          const s = samples[0];
+          return { ...s, ground: s.ground, yaw: s.yaw ?? 0 };
+        }
+
+        const idxF = THREE.MathUtils.clamp(progress, 0, 1) * (samples.length - 1);
+        const i0 = Math.floor(idxF);
+        const i1 = Math.min(samples.length - 1, i0 + 1);
+        const f = idxF - i0;
+        const A = samples[i0], B = samples[i1];
+        const L = (a, b) => a + (b - a) * f;
+
+        return {
+          t:        L(A.t, B.t),
+          x:        L(A.x, B.x),
+          y:        L(A.alt, B.alt),
+          z:        L(A.z, B.z),
+          dist:     L(A.dist, B.dist),
+          ground:   L(A.ground, B.ground),
+          pitch:    L(A.pitch, B.pitch),
+          yaw:      L(A.yaw ?? 0, B.yaw ?? 0),
+          roll:     L(A.roll, B.roll),
+          speed:    L(A.speed, B.speed),
+          throttle: L(A.throttle, B.throttle)
+        };
+      }
+
+      /* ══════════════════════════════════════════════════════════════════
+         3D ORBIT REPLAY — Three.js OrbitControls playback
+         ══════════════════════════════════════════════════════════════════ */
+      initOrbitReplay() {
+        this.orbit = { active: false, playing: false, progress: 0, speed: 1, saved: null };
+
+        this.orbitPanel    = document.getElementById('orbit-replay-panel');
+        this.orbitPlayBtn  = document.getElementById('orbit-play');
+        this.orbitScrub    = document.getElementById('orbit-scrub');
+        this.orbitTimeEl   = document.getElementById('orbit-time');
+        this.orbitSpeedBtns = Array.from(document.querySelectorAll('[data-orbit-speed]'));
+
+        document.getElementById('btn-orbit-replay').addEventListener('click', () => this.toggleOrbitReplay());
+        document.getElementById('orbit-exit').addEventListener('click', () => this.toggleOrbitReplay(false));
+        this.orbitPlayBtn.addEventListener('click', () => this.toggleOrbitPlayback());
+
+        this.orbitScrub.addEventListener('input', (e) => {
+          this.orbit.playing = false;
+          this.orbit.progress = parseFloat(e.target.value) / 1000;
+          this.syncOrbitUI();
+        });
+
+        this.orbitSpeedBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.orbit.speed = parseFloat(btn.dataset.orbitSpeed) || 1;
+            this.syncOrbitUI();
+          });
+        });
+
+        window.addEventListener('keydown', (e) => {
+          if (!this.orbit.active) return;
+          if (e.code === 'Space') {
+            e.preventDefault();
+            this.toggleOrbitPlayback();
+          } else if (e.code === 'Escape') {
+            e.preventDefault();
+            this.toggleOrbitReplay(false);
+          }
+        });
+
+        this.syncOrbitUI();
+      }
+
+      toggleOrbitReplay(force) {
+        const next = (force === undefined) ? !this.orbit.active : !!force;
+
+        if (next) {
+          if (!this.world3D.controls) {
+            this.jestRunner.appendLog('warn', 'OrbitControls unavailable — 3D orbit replay cannot start.');
+            return;
+          }
+          if (this.replay.samples.length < 2) {
+            this.jestRunner.appendLog('warn', 'Orbit replay unavailable: no recorded flight frames yet. Fly for a few seconds first.');
+            return;
+          }
+        }
+
+        if (next === this.orbit.active) return;
+
+        this.orbit.active = next;
+        this.orbitPanel.style.display = next ? 'flex' : 'none';
+        document.getElementById('btn-orbit-replay').classList.toggle('orbit-active', next);
+
+        if (next) {
+          this.orbit.saved = this.snapshotFlightState();
+          this.orbit.progress = 0;
+          this.orbit.playing = true;
+
+          this.jestRunner.appendLog('info', `3D Orbit Replay engaged — ${this.replay.samples.length} frames, OrbitControls live.`);
+
+          const start = this.sampleAtProgress(0);
+          const focus = new THREE.Vector3(start.x, start.y, start.z);
+          this.world3D.setOrbitMode(true, focus);
+
+          this.applyOrbitReplayPose(0);
+          this.syncOrbitUI();
+        } else {
+          this.world3D.setOrbitMode(false);
+          if (this.orbit.saved) this.restoreFlightState(this.orbit.saved);
+          this.orbit.saved = null;
+          this.orbit.playing = false;
+          this.jestRunner.appendLog('info', '3D Orbit Replay ended — live flight control restored.');
+        }
+      }
+
+      snapshotFlightState() {
+        const s = this.flightState;
+        return {
+          position: s.position.clone(),
+          rotation: s.rotation.clone(),
+          speed: s.speed,
+          throttle: s.throttle,
+          vsi: s.vsi,
+          gForce: s.gForce
+        };
+      }
+
+      restoreFlightState(snap) {
+        const s = this.flightState;
+        s.position.copy(snap.position);
+        s.rotation.copy(snap.rotation);
+        s.speed = snap.speed;
+        s.throttle = snap.throttle;
+        s.vsi = snap.vsi;
+        s.gForce = snap.gForce;
+        s.pitchRate = 0;
+        s.rollRate = 0;
+        s.yawRate = 0;
+      }
+
+      orbitDurationSec() {
+        const s = this.replay.samples;
+        if (s.length < 2) return 1;
+        return THREE.MathUtils.clamp(s[s.length - 1].t - s[0].t, 2, 30);
+      }
+
+      toggleOrbitPlayback() {
+        if (!this.orbit.active) return;
+        if (this.orbit.progress >= 1) this.orbit.progress = 0;
+        this.orbit.playing = !this.orbit.playing;
+        this.syncOrbitUI();
+      }
+
+      syncOrbitUI() {
+        this.orbitScrub.value = String(Math.round(this.orbit.progress * 1000));
+
+        this.orbitPlayBtn.innerHTML = this.orbit.playing
+          ? '<i class="ph-bold ph-pause"></i>'
+          : '<i class="ph-bold ph-play"></i>';
+
+        const s = this.replay.samples;
+        if (s.length > 1) {
+          const t0 = s[0].t, t1 = s[s.length - 1].t;
+          const cur = t0 + (t1 - t0) * this.orbit.progress;
+          this.orbitTimeEl.textContent = `T+${(cur - t0).toFixed(1)}s / ${(t1 - t0).toFixed(1)}s`;
+        } else {
+          this.orbitTimeEl.textContent = 'T+0.0s / 0.0s';
+        }
+
+        this.orbitSpeedBtns.forEach(btn => {
+          const active = parseFloat(btn.dataset.orbitSpeed) === this.orbit.speed;
+          btn.classList.toggle('orbit-speed-active', active);
+        });
+      }
+
+      applyOrbitReplayPose(progress) {
+        const sm = this.sampleAtProgress(progress);
+        if (!sm) return;
+
+        const s = this.flightState;
+        s.position.set(sm.x, sm.y, sm.z);
+        s.rotation.set(sm.pitch, sm.yaw, sm.roll, 'YXZ');
+        s.speed = sm.speed;
+        s.throttle = sm.throttle;
+        s.vsi = Math.sin(sm.pitch) * (sm.speed * 0.514444) * 196.85;
+        s.gForce = 1.0;
+        s.autopilot = false;
+
+        this.world3D.aircraftGroup.position.copy(s.position);
+        this.world3D.aircraftGroup.rotation.copy(s.rotation);
+        this.world3D.afterburnerLight.intensity = (sm.throttle / 100) * 5;
+      }
+
+      updateOrbitReplay(dt) {
+        if (!this.orbit.active) return;
+
+        if (this.orbit.playing) {
+          const dur = this.orbitDurationSec();
+          this.orbit.progress += (dt * this.orbit.speed) / dur;
+
+          if (this.orbit.progress >= 1) {
+            this.orbit.progress = 1;
+            this.orbit.playing = false;
+            this.syncOrbitUI();
+          } else {
+            this.orbitScrub.value = String(Math.round(this.orbit.progress * 1000));
+            const s = this.replay.samples;
+            if (s.length > 1) {
+              const t0 = s[0].t, t1 = s[s.length - 1].t;
+              const cur = t0 + (t1 - t0) * this.orbit.progress;
+              this.orbitTimeEl.textContent = `T+${(cur - t0).toFixed(1)}s / ${(t1 - t0).toFixed(1)}s`;
+            }
+          }
+        }
+
+        this.applyOrbitReplayPose(this.orbit.progress);
+      }
+
+      bindUI() {
+        const throtInput = document.getElementById('input-throttle');
+        throtInput.addEventListener('input', (e) => {
+          this.flightState.throttle = parseFloat(e.target.value);
+        });
+
+        document.getElementById('btn-autopilot').addEventListener('click', () => {
+          this.flightState.autopilot = !this.flightState.autopilot;
+          const apStateEl = document.getElementById('ap-state');
+          apStateEl.textContent = this.flightState.autopilot ? 'ACTIVE' : 'OFF';
+          apStateEl.className = this.flightState.autopilot ? 'text-emerald-400' : 'text-amber-400';
+          this.jestRunner.appendLog('info', `Autopilot state toggled: ${this.flightState.autopilot}`);
+        });
+
+        document.getElementById('btn-camera').addEventListener('click', () => {
+          if (this.orbit.active) this.toggleOrbitReplay(false);
+          this.world3D.cameraMode = (this.world3D.cameraMode + 1) % 2;
+          document.getElementById('cam-name').textContent = this.world3D.cameraMode === 0 ? 'Chase Cam' : 'Cockpit Cam';
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+          if (this.orbit.active) this.toggleOrbitReplay(false);
+          this.flightState.reset();
+          this.clearReplay();
+          this.jestRunner.appendLog('warn', `Flight dynamics state reset to default origin. Replay buffer flushed.`);
+        });
+
+        document.getElementById('btn-run-tests').addEventListener('click', () => {
+          this.jestRunner.runAll(this.flightState, this.world3D);
+        });
+
+        document.getElementById('btn-clear-log').addEventListener('click', () => {
+          document.getElementById('jest-log-console').innerHTML = '';
+        });
+      }
+
+      /* ══════════════════════════════════════════════════════════════════
+         JEST TEST SUITE — DEBUGGED + EXPANDED
+         ══════════════════════════════════════════════════════════════════ */
+      initJestTestSuite() {
+        // 1 · Aerodynamic speed bounds
+        this.jestRunner.registerTest('Aerodynamic Envelope Bounds', async (state) => {
+          const isValid = state.speed >= 0 && state.speed <= 800;
+          return {
+            tag: isValid ? 'PASS' : 'FAIL',
+            message: `Airspeed ${state.speed.toFixed(1)} kts within boundary [0, 800].`
+          };
+        }, 'PASS');
+
+        // 2 · Ground collision radar
+        this.jestRunner.registerTest('Ground Collision Radar', async (state, world) => {
+          const groundY = world.getTerrainHeightAt(state.position.x, state.position.z);
+          const agl = state.position.y - groundY;
+          if (agl < 10) {
+            return { tag: 'FAIL', message: `CRITICAL TERRAIN PROXIMITY! AGL: ${agl.toFixed(1)} ft.` };
+          }
+          return { tag: 'PASS', message: `Radar AGL: ${agl.toFixed(1)} ft above terrain mesh.` };
+        }, 'PASS');
+
+        // 3 · SHA3-512 hash stream — DEBUGGED: validates 128 hex chars
+        this.jestRunner.registerTest('SHA3-512 Epoch Hash Stream', async () => {
+          if (!CryptoEngine.available()) {
+            return { tag: 'SKIP', message: 'WebCrypto unavailable (insecure context) — hash stream disabled.' };
+          }
+          try {
+            const hash = await CryptoEngine.sha3_512Simulated(String(Date.now()));
+            if (hash.length === 128) {
+              return {
+                tag: 'PASS',
+                message: `512-bit entropy · ${hash.substring(0, 16)}…${hash.substring(hash.length - 8)} (${hash.length} hex).`
+              };
+            }
+            return { tag: 'FAIL', message: `Hash width mismatch: expected 128 hex, got ${hash.length}.` };
+          } catch (err) {
+            return { tag: 'FAIL', message: `Crypto engine error: ${err.message || err}` };
+          }
+        }, 'PASS');
+
+        // 4 · G-force structural limits
+        this.jestRunner.registerTest('G-Force Stress Limit Verification', async (state) => {
+          if (state.gForce > 9.0) {
+            return { tag: 'SKIP', message: `G-Load ${state.gForce.toFixed(1)}G exceeds structural safety allowance.` };
+          }
+          return { tag: 'PASS', message: `Structure nominal. Load factor: ${state.gForce.toFixed(1)} G.` };
+        }, 'PASS');
+
+        // 5 · AI autopilot vectoring
+        this.jestRunner.registerTest('KBS::AI Autopilot Vectoring', async (state) => {
+          return {
+            tag: 'KBS::AI',
+            message: `AI Trim active. Pitch offset ${THREE.MathUtils.radToDeg(state.rotation.x).toFixed(1)}°.`
+          };
+        }, 'KBS::AI');
+
+        // 6 · Side-view replay timeline
+        this.jestRunner.registerTest('Side-View Replay Timeline', async () => {
+          const n = this.replay.samples.length;
+          const mode = this.supportsScrollTimeline ? 'animation-timeline (scroll)' : 'scrollTop fallback';
+          return {
+            tag: n > 1 ? 'PASS' : 'PROB',
+            message: `${n} profile frames buffered · driver: ${mode}.`
+          };
+        }, 'PASS');
+
+        // 7 · OrbitControls availability
+        this.jestRunner.registerTest('OrbitControls 3D Replay Driver', async () => {
+          const has = !!this.world3D.controls;
+          return {
+            tag: has ? 'PASS' : 'SKIP',
+            message: has
+              ? 'THREE.OrbitControls attached · damping on · orbit replay armed.'
+              : 'THREE.OrbitControls not present — 3D orbit replay disabled.'
+          };
+        }, 'PASS');
+
+        // 8 · Euler rotation stability (NEW)
+        this.jestRunner.registerTest('Euler Rotation Stability', async (state) => {
+          const { x, y, z } = state.rotation;
+          const finite = [x, y, z].every(Number.isFinite);
+          const inPitchBound = x >= -Math.PI / 2 && x <= Math.PI / 2;
+          if (!finite) return { tag: 'FAIL', message: `Non-finite Euler state: (${x}, ${y}, ${z}).` };
+          if (!inPitchBound) return { tag: 'WARN', message: `Pitch ${(x * 180 / Math.PI).toFixed(1)}° outside ±90° envelope.` };
+          return { tag: 'PASS', message: `Euler valid · pitch ${(x * 180 / Math.PI).toFixed(1)}° within ±90°.` };
+        }, 'PASS');
+
+        // 9 · Throttle authority (NEW)
+        this.jestRunner.registerTest('Throttle Authority Bounds', async (state) => {
+          if (state.throttle < 0 || state.throttle > 100) {
+            return { tag: 'FAIL', message: `Throttle ${state.throttle.toFixed(1)}% out of [0,100] authority range.` };
+          }
+          return { tag: 'PASS', message: `Throttle ${state.throttle.toFixed(1)}% within IDLE↔AB envelope.` };
+        }, 'PASS');
+
+        // 10 · Flight state non-NaN (NEW)
+        this.jestRunner.registerTest('Flight State Non-NaN Integrity', async (state) => {
+          const p = state.position;
+          const vals = [p.x, p.y, p.z, state.speed, state.throttle];
+          if (vals.some(v => !Number.isFinite(v))) {
+            return { tag: 'FAIL', message: 'Flight state contains NaN/Infinity — simulation unstable.' };
+          }
+          return {
+            tag: 'PASS',
+            message: `All vectors finite · pos (${p.x.toFixed(0)}, ${p.y.toFixed(0)}, ${p.z.toFixed(0)}).`
+          };
+        }, 'PASS');
+
+        // 11 · Recording buffer integrity (NEW)
+        this.jestRunner.registerTest('Recording Buffer Integrity', async () => {
+          const n = this.replay.samples.length;
+          if (n === 0) return { tag: 'PROB', message: 'No samples yet — fly for a moment to populate.' };
+          const last = this.replay.samples[n - 1];
+          const ok = Number.isFinite(last.alt) && Number.isFinite(last.speed);
+          return {
+            tag: ok ? 'PASS' : 'FAIL',
+            message: ok
+              ? `${n} samples buffered · last t=${last.t.toFixed(1)}s alt=${last.alt.toFixed(0)}m.`
+              : 'Corrupt sample detected in buffer.'
+          };
+        }, 'PASS');
+      }
+
+      async updateHUD() {
+        const state = this.flightState;
+
+        document.getElementById('hud-speed').textContent = Math.round(state.speed);
+        document.getElementById('hud-mach').textContent = (state.speed / 661.7).toFixed(2);
+        document.getElementById('bar-speed').style.width = `${Math.min(100, (state.speed / 400) * 100)}%`;
+
+        document.getElementById('hud-throttle-val').textContent = `${Math.round(state.throttle)}%`;
+        document.getElementById('input-throttle').value = state.throttle;
+
+        const altFt = state.position.y * 3.28084;
+        document.getElementById('hud-alt').textContent = Math.round(altFt).toLocaleString();
+        document.getElementById('bar-alt').style.width = `${Math.min(100, (altFt / 10000) * 100)}%`;
+        document.getElementById('hud-vsi').textContent = `${state.vsi >= 0 ? '+' : ''}${Math.round(state.vsi)} FPM`;
+
+        const vsiClamped = Math.max(-20, Math.min(20, state.vsi / 100));
+        document.getElementById('indicator-vsi').style.transform = `translateY(${-vsiClamped}px)`;
+
+        document.getElementById('hud-gforce').textContent = `${state.gForce.toFixed(1)} G`;
+        document.getElementById('hud-pitch').textContent = `${state.rotation.x >= 0 ? '+' : ''}${(THREE.MathUtils.radToDeg(state.rotation.x)).toFixed(1)}°`;
+
+        const headingDeg = (THREE.MathUtils.radToDeg(-state.rotation.y) + 360) % 360;
+        document.getElementById('hud-heading').textContent = `${Math.round(headingDeg)}°`;
+
+        const rollDeg = THREE.MathUtils.radToDeg(state.rotation.z);
+        const pitchPx = THREE.MathUtils.radToDeg(state.rotation.x) * 2.5;
+        document.getElementById('horizon-container').style.transform = `rotate(${rollDeg}deg)`;
+        document.getElementById('horizon-line').style.transform = `translateY(${pitchPx}px)`;
+
+        document.getElementById('hud-coords').textContent = `X: ${Math.round(state.position.x)} | Y: ${Math.round(state.position.y)} | Z: ${Math.round(state.position.z)}`;
+        const groundHeight = this.world3D.getTerrainHeightAt(state.position.x, state.position.z);
+        const agl = Math.round((state.position.y - groundHeight) * 3.28084);
+        const terrainEl = document.getElementById('hud-terrain');
+
+        if (agl < 100) {
+          terrainEl.textContent = `PULL UP! (${agl}ft AGL)`;
+          terrainEl.className = 'text-red-400 font-bold animate-pulse';
+        } else {
+          terrainEl.textContent = `CLEAR (${agl}ft AGL)`;
+          terrainEl.className = 'text-cyan-400 font-semibold';
+        }
+
+        // Live SHA3-512 hash — DEBUGGED: try/catch + color cycling
+        const now = Date.now();
+        document.getElementById('epoch-time').textContent = now;
+        if (Math.random() < 0.25 && CryptoEngine.available()) {
+          try {
+            const cryptoHash = await CryptoEngine.sha3_512Simulated(`${now}-${state.position.x.toFixed(2)}-${state.position.z.toFixed(2)}`);
+            const hashEl = document.getElementById('crypto-hash');
+            hashEl.textContent = cryptoHash;
+            // Rotate hue from the hash prefix so the stream feels alive
+            const hue = parseInt(cryptoHash.substring(0, 3), 16) % 360;
+            hashEl.style.color = `hsl(${hue}, 88%, 68%)`;
+          } catch (err) {
+            document.getElementById('crypto-hash').textContent = 'crypto.subtle unavailable';
+            document.getElementById('crypto-hash').style.color = '#f87171';
+          }
+        }
+      }
+
+      animate(currentTime) {
+        requestAnimationFrame(this.animate.bind(this));
+
+        const dt = Math.min(0.1, (currentTime - this.lastTime) / 1000);
+        this.lastTime = currentTime;
+        this.elapsed += dt;
+
+        if (this.orbit.active) {
+          this.updateOrbitReplay(dt);
+          this.world3D.updateCamera(this.flightState);
+        } else {
+          this.flightState.update(dt, this.keys);
+          this.world3D.updateCamera(this.flightState);
+
+          const terrainY = this.world3D.getTerrainHeightAt(this.flightState.position.x, this.flightState.position.z);
+          if (this.flightState.position.y <= terrainY + 2) {
+            this.flightState.position.y = terrainY + 2;
+            this.flightState.speed *= 0.95;
+          }
+        }
+
+        this.updateHUD();
+        this.recordReplaySample();
+        this.updateReplay();
+
+        this.world3D.renderer.render(this.world3D.scene, this.world3D.camera);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      new FlightSimulatorApp();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+:root {
+  --punch-red: #e63946;
+  --honeydew: #f1faee;
+  --frosted-blue: #a8dadc;
+  --pacific-blue: #77abbd;
+  --cerulean: #457b9d;
+  --baltic-blue: #31587a;
+  --oxford-navy: #1d3557;
+}
+
+@property --a   { syntax: "<angle>";  inherits: true;  initial-value: 0deg; }
+@property --amp { syntax: "<number>"; inherits: false; initial-value: 1; }
+@property --off { syntax: "<angle>";  inherits: false; initial-value: 0deg; }
+
+html { background: var(--punch-red); }
+
+html::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  border: 16px solid var(--punch-red);
+}
+
+body {
+  margin: 0;
+  height: 600vh;
+  background: radial-gradient(
+    circle 500vh at 50% 50vh,
+    var(--punch-red) 0 30vh,    
+    var(--honeydew) 30.7vh,  
+    var(--frosted-blue) 100vh,
+    var(--oxford-navy) 400vh           
+  );
+}
+
+body::after {
+  content: "";
+  position: fixed;                     
+  inset: 0;
+  z-index: 16;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.35;
+
+  background-image:
+    radial-gradient(rgb(255 255 255 / 0.9) 0.6px, transparent 0.9px),
+    radial-gradient(rgb(255 255 255 / 0.7) 0.5px, transparent 0.8px),
+    radial-gradient(rgb(0 0 0 / 0.8) 0.6px, transparent 0.9px),
+    radial-gradient(rgb(0 0 0 / 0.6) 0.5px, transparent 0.8px);
+
+  background-size: 3px 3px, 5px 5px, 7px 7px, 11px 11px;
+
+  background-position:
+    random(0px, 3px) random(0px, 3px),
+    random(0px, 5px) random(0px, 5px),
+    random(0px, 7px) random(0px, 7px),
+    random(0px, 11px) random(0px, 11px);
+}
+
+.wave {
+  position: fixed;
+  inset: auto 0 0 0;
+  height: 70vh;
+  display: flex;
+  align-items: flex-end;
+  animation: roll linear both;
+  animation-timeline: scroll(root);   
+}
+
+@keyframes roll {
+  to { --a: 720deg; }                  
+}
+
+.w1 { z-index: 1; --base: 46vh; --swing: 4vh; --speed: 1;  --step: 14deg; --c1: var(--frosted-blue); --c2: var(--pacific-blue); }
+.w2 { z-index: 2; --base: 38vh; --swing: 5vh; --speed: -1; --step: 18deg; --c1: var(--pacific-blue); --c2: var(--cerulean); }
+.w3 { z-index: 3; --base: 30vh; --swing: 6vh; --speed: 2;  --step: 22deg; --c1: var(--cerulean);     --c2: var(--baltic-blue); }
+.w4 { z-index: 4; --base: 22vh; --swing: 6vh; --speed: -2; --step: 26deg; --c1: var(--baltic-blue);  --c2: var(--oxford-navy); }
+
+.wave i {
+  --px: 8px;                         
+  --amp: random(0.5, 0.9);           
+  --off: random(-5deg, 5deg);         
+
+  flex: 1;
+  height: round(
+    down,
+    calc(
+      var(--base) +
+      sin(calc(var(--a) * var(--speed) + sibling-index() * var(--step) + var(--off)))
+      * var(--swing) * var(--amp)
+    ),
+    var(--px)
+  );
+
+  background: linear-gradient(var(--c1), var(--c2));
+
+  -webkit-mask-image: repeating-linear-gradient(
+    0deg, #000 0 calc(var(--px) - 2px), transparent 0 var(--px)
+  );
+  mask-image: repeating-linear-gradient(
+    0deg, #000 0 calc(var(--px) - 2px), transparent 0 var(--px)
+  );
+}

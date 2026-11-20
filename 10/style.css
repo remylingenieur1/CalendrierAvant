@@ -1,0 +1,197 @@
+@property --i {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 0;
+}
+
+@property --n {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 64;
+}
+
+* { box-sizing: border-box; }
+
+:root {
+    color-scheme: dark;
+    background: #050609;
+    --size: min(96vw, 96svh, 1080px);
+    --u: calc(var(--size) / 100);
+    --period: 9s;
+}
+
+body { margin: 0; }
+
+.exhibit {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100svh;
+    overflow: hidden;
+    isolation: isolate;
+    background: radial-gradient(ellipse at 47% 43%, #222836 0%, #101522 31%, #080b11 53%, #030407 82%);
+}
+
+.viewport {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    perspective: calc(var(--size) * 2.05);
+    perspective-origin: 50% 44%;
+    touch-action: none;
+    cursor: grab;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+
+.viewport:active { cursor: grabbing; }
+.viewport:focus-visible { outline: none; }
+
+.camera,
+.sculpture,
+.vanes,
+.vane,
+.blade {
+    transform-style: preserve-3d;
+}
+
+.camera {
+    --pitch: 46deg;
+    --yaw: -24deg;
+    width: 0;
+    height: 0;
+    transform: rotateX(var(--pitch)) rotateZ(var(--yaw));
+}
+
+.sculpture {
+    position: absolute;
+    width: 0;
+    height: 0;
+    animation: drift 48s linear infinite;
+}
+
+/* A stationary-looking metal bearing under the moving slats. */
+.rim {
+    position: absolute;
+    width: calc(64 * var(--u));
+    height: calc(64 * var(--u));
+    left: calc(-32 * var(--u));
+    top: calc(-32 * var(--u));
+    border: calc(.48 * var(--u)) solid #161e2a;
+    border-radius: 50%;
+    box-shadow: 0 0 0 calc(.15 * var(--u)) #737f9a,
+                inset 0 0 0 calc(.12 * var(--u)) #b0c1d8;
+    transform: translateZ(calc(-.8 * var(--u)));
+}
+
+.vanes { position: absolute; width: 0; height: 0; }
+
+.vane {
+    position: absolute;
+    width: 0;
+    height: 0;
+    --angle: calc(1turn * var(--i) / var(--n));
+    --width: calc(2 * pi * 32 * var(--u) / var(--n) * .72);
+    transform: rotateZ(var(--angle)) translateX(calc(32 * var(--u)));
+}
+
+/* Native sibling functions are the source of both geometry and timing. */
+@supports (z-index: sibling-index()) and (z-index: sibling-count()) {
+    .vane {
+        --i: calc(sibling-index() - 1);
+        --n: sibling-count();
+    }
+}
+
+.blade {
+    position: absolute;
+    width: calc(30 * var(--u));
+    height: var(--width);
+    left: calc(-15 * var(--u));
+    top: calc(var(--width) / -2);
+    animation: oscillation var(--period) linear infinite;
+    animation-delay: calc(-2 * var(--period) * var(--i) / var(--n));
+}
+
+/* Both sides of each blade are modelled as separate metal surfaces. */
+.blade::before,
+.blade::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 52% 9% 12% 48% / 25% 40% 40% 25%;
+    backface-visibility: hidden;
+    background: #6b7a94;
+    box-shadow: inset 0 1px 0 #c5d9fb,
+                inset 0 -1px 0 #161d31,
+                inset 1px 0 0 #b9c7d9;
+}
+
+/* Hard reflection bands emulate a dark studio reflected in liquid chrome. */
+.blade::before {
+    transform: translateZ(calc(.12 * var(--u)));
+    background:
+        linear-gradient(0deg, #03050b85, transparent 25%, #d5e9ff2b 80%, #e5f5ff80),
+        linear-gradient(106deg,
+            #0b101c 0%, #7586a1 10%, #e6f5ff 15%, #91a7c7 20%,
+            #243044 30%, #080b13 39%, #111b35 44%, #819bc2 50%,
+            #f0f8ff 54%, #a4bddc 59%, #4a536e 66%, #25263c 75%,
+            #8a83b2 83%, #b9caee 91%, #253049 100%);
+}
+
+.blade::after {
+    transform: rotateX(180deg) translateZ(calc(.12 * var(--u)));
+    background:
+        linear-gradient(0deg, #02030a99, transparent 42%, #a0b4e52b),
+        linear-gradient(95deg,
+            #080a10, #434e70 16%, #a8b9dc 24%, #232a44 34%,
+            #0b101e 47%, #616c93 55%, #d2ddf2 62%, #727ca6 68%,
+            #232840 78%, #101521 92%, #64718a);
+    box-shadow: inset 0 1px 0 #9baad0, inset 0 -1px 0 #0c1221;
+}
+
+/* A narrow axis runs through every vane, regardless of the face angle. */
+.vane::after {
+    content: '';
+    position: absolute;
+    width: calc(.8 * var(--u));
+    height: calc(.8 * var(--u));
+    left: calc(-.4 * var(--u));
+    top: calc(-.4 * var(--u));
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 28%, #eff7ff, #7183a6 55%, #131b2a 85%);
+    transform: translateZ(calc(1 * var(--u)));
+}
+
+@keyframes drift { to { transform: rotateZ(1turn); } }
+
+@keyframes oscillation {
+    0%, 100% { transform: rotateY(-68deg) rotateX(-24deg); }
+    12.5% { transform: rotateY(-48deg) rotateX(-15deg); }
+    25% { transform: rotateY(0deg) rotateX(0deg); }
+    37.5% { transform: rotateY(48deg) rotateX(15deg); }
+    50% { transform: rotateY(68deg) rotateX(24deg); }
+    62.5% { transform: rotateY(48deg) rotateX(15deg); }
+    75% { transform: rotateY(0deg) rotateX(0deg); }
+    87.5% { transform: rotateY(-48deg) rotateX(-15deg); }
+}
+
+.shadow {
+    position: absolute;
+    pointer-events: none;
+    width: calc(76 * var(--u));
+    height: calc(18 * var(--u));
+    left: 50%;
+    top: 68%;
+    transform: translate(-50%, -50%) rotate(-5deg);
+    background: radial-gradient(ellipse, #000000a0 0%, #00000045 45%, transparent 72%);
+    filter: blur(calc(2 * var(--u)));
+}
+
+.exhibit[data-paused] .sculpture,
+.exhibit[data-paused] .blade { animation-play-state: paused; }
+
+@media (max-width: 600px) {
+    :root { --size: min(110vw, 86svh); }
+    .shadow { top: 61%; }
+}

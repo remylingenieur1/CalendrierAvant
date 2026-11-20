@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="./style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pen</title>
+  </head>
+  <body style="margin: 0; height: 100vh; background: #000; display: grid; place-items: center; overflow: hidden;">
+    <svg viewBox="0 -.1 25.25 5.5" width="100vw">
+      <defs>
+        <path id="eyes" d="m 1 2 h 3" stroke-linecap="round" stroke-dasharray="0 2" />
+    
+        <g id="sprite">
+          <animate attributeName="opacity" values="1; 0" dur="12s" calcMode="discrete" repeatCount="indefinite" /> 
+          <path id="torso" d="m 2 2 v 1.5 -1.5" stroke-width="4" stroke-linecap="round" />
+          
+          <g id="frills">
+            <path id="frill" stroke-width=".9" stroke-linecap="round">
+              <animate id="flail" attributeName="d" values="
+                M .45 3 C .45 3.5 .45 4 .2 4.5;
+                M .45 3 C .45 3.5 .45 4 .6 4.5;
+                M .45 3 C .45 3.5 .45 4 .2 4.5"
+                dur="1s" repeatCount="indefinite" />
+            </path>
+            <use href="#frill" transform="translate(1.033 0)" />
+            <use href="#frill" transform="translate(2.066 0)" />
+            <use href="#frill" transform="translate(3.1 0)" />
+          </g>
+          <use href="#eyes" stroke="#fff" stroke-width="1.25">
+            <animateTransform attributeName="transform" type="translate" values="-.375 0; .375 0; .375 0; -.375 0; -.375 0" keyTimes="0; .1; .5; .6; 1" dur="4" repeatCount="indefinite" />
+          </use>
+          <use href="#eyes" stroke="#000" stroke-width=".675">
+            <animateTransform attributeName="transform" type="translate" values="-.6 0; .6 0; .6 0; -.6 0; -.6 0" keyTimes="0; .1; .5; .6; 1" dur="4" repeatCount="indefinite" />
+          </use>
+        </g>
+    
+        <g id="spook" fill="none" stroke="#0ff">
+          <animate attributeName="opacity" values="0; 1" dur="12s" calcMode="discrete" repeatCount="indefinite" /> 
+          <path id="torso" d="m 0 5 V 2 a 2 2 0 1 1 4 0 V 5.5 a .666 .666 0 0 0 -1.333 0 a .666 .666 0 0 0 -1.333 0 a .666 .666 0 0 0 -1.333 0" stroke-width=".2" stroke-dasharray=".5 .5">
+            <animate attributeName="stroke-dashoffset" values="0; -1" dur=".5s" repeatCount="indefinite" />
+          </path>
+          <circle id="peeper" cx="1.125" cy="2" r=".5">
+            <animate attributeName="stroke-width" values=".3;.4;.3" dur=".5s" repeatCount="indefinite" />
+          </circle>
+          <use href="#peeper" transform="translate(1.75 0)" />
+        </g>
+    
+      </defs>
+    
+      <g>
+        <animateTransform attributeName="transform" type="translate" values="26 0; -26 0; 26 0" dur="12s" repeatCount="indefinite" />
+        <g transform-box="fill-box" transform-origin="2.5 2.5">
+          <animateTransform attributeName="transform" type="scale" dur="12s" values="-1 1; 1 1" repeatCount="indefinite" calcMode="discrete" /> 
+          <circle cx="0" cy="0" r="1.25" stroke="#ff0" stroke-width="2.5" transform="translate(2.5 2.5) rotate(-45)">
+            <animate attributeName="stroke-dasharray" values="1 0 10; 0 2 10; 1 0 10" dur=".66s" repeatCount="indefinite" />
+          </circle>
+        </g>
+    
+        <g transform="translate(6 0)">
+          <use href="#sprite" stroke="#f80" />
+          <use href="#spook" />
+        </g>
+        <g transform="translate(11 0)">
+          <use href="#sprite" stroke="#08f" />
+          <use href="#spook" />
+        </g>
+        <g transform="translate(16 0)">
+          <use href="#sprite" stroke="#f00" />
+          <use href="#spook" />
+        </g>
+        <g transform="translate(21 0)">
+          <use href="#sprite" stroke="#f88" />
+          <use href="#spook" />
+        </g>
+      </g>
+    
+    </svg>
+  </body>
+</html>
