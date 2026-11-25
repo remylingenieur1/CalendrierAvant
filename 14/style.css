@@ -1,0 +1,101 @@
+@charset "UTF-8";
+:root { color-scheme: dark; background: #245357; font-family: Georgia, 'Times New Roman', serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; min-height: 100%; }
+body { overflow: hidden; }
+button { -webkit-tap-highlight-color: transparent; }
+.stage {
+  min-height: 100svh; height: 100dvh; overflow: hidden; display: grid; place-items: center;
+  grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
+  background: radial-gradient(ellipse at 55% 43%, #32676A 0%, #245357 50%, #142F34 100%);
+}
+.harp {
+  position: relative; width: min(94vw, calc((100dvh - 110px) * 1.34164), 1360px); margin-bottom: 74px; aspect-ratio: 1453 / 1083;
+  isolation: isolate; touch-action: none; user-select: none; -webkit-user-select: none;
+  container-type: inline-size;
+}
+.frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+.strings { position: absolute; inset: 0; z-index: 3; }
+/* Sibling functions calculate the eight-slot baseline. Small measured
+   corrections match the illustrated pegs; each sharp uses half the corrected
+   step width. Empty slots preserve all remaining note positions. */
+.note-slot {
+  --index: var(--fallback-index, 1); --count: var(--fallback-count, 1);
+  --progress: calc((var(--index) - 1) / max(1, var(--count) - 1));
+  --hue: calc(205 + var(--progress) * 35);
+  position: absolute; top: 0; height: 100%;
+  left: calc(var(--peg-start) + var(--progress) * var(--peg-span) + var(--peg-correction));
+  width: calc(var(--peg-span) / max(1, var(--count) - 1) + var(--next-peg-correction) - var(--peg-correction));
+  pointer-events: none;
+}
+@supports (top: calc(sibling-index() * 1px)) and (z-index: sibling-count()) {
+  .note-slot { --index: sibling-index(); --count: sibling-count(); }
+}
+.string {
+  --string-color: hsl(var(--hue) 75% 91%); --energy: 0;
+  position: absolute; left: 0; top: var(--string-top, 0%); height: var(--string-length, 0%);
+  width: clamp(14px, calc(190px / max(1, var(--installed-count, 1))), 34px);
+  padding: 0; margin: 0; border: 0; border-radius: 4px;
+  background: transparent; transform: translateX(-50%); color: var(--string-color);
+  cursor: pointer; outline: none; touch-action: none; pointer-events: auto;
+  animation: appear 650ms both; animation-delay: calc((var(--index) - 1) * 28ms);
+}
+.string--sharp { left: 50%; --string-color: #f2d8f5; }
+.string::before {
+  content: ""; position: absolute; z-index: 2; left: 50%; top: 0; width: 5px; height: 5px;
+  transform: translate(-50%, -50%); border-radius: 50%;
+  background: #ffe0b4; box-shadow: 0 0 5px #ffdda37a;
+}
+.string-wire {
+  position: absolute; top: 0; left: 50%; width: 80px; height: 100%;
+  transform: translateX(-50%); overflow: visible; pointer-events: none;
+}
+.wire { fill: none; stroke: var(--string-color); stroke-width: 1.4; vector-effect: non-scaling-stroke; opacity: .9; }
+.wire-glow { fill: none; stroke: #fff4ff; stroke-width: 4; vector-effect: non-scaling-stroke; opacity: .08; filter: blur(1.4px); }
+.wire-echo { fill: none; stroke: #e6dcff; stroke-width: 1; vector-effect: non-scaling-stroke; opacity: 0; }
+.string:hover .wire, .string:focus-visible .wire { stroke: #fff7fc; stroke-width: 1.9; opacity: 1; }
+.string:focus-visible { outline: 1px solid #f8b8e75c; outline-offset: 5px; }
+.string.sounding .wire { stroke: #fff5ff; opacity: 1; filter: drop-shadow(0 0 2px #f0d7ff); }
+.string.sounding .wire-glow { opacity: calc(var(--energy) * .38); }
+.string.sounding .wire-echo { opacity: calc(var(--energy) * .5); }
+.note-label {
+  position: absolute; left: 50%; bottom: calc(100% + 25px); transform: translateX(-50%);
+  display: inline-flex; align-items: center; justify-content: center; height: 1.35em;
+  color: #f27ad7; font-size: clamp(20px, 4cqw, 48px); line-height: 1; font-weight: 500;
+  white-space: nowrap; font-variant-numeric: lining-nums; pointer-events: none;
+  opacity: 0;
+  text-shadow: 0 0 3px #f44fcdcc, 0 0 10px #fa4fda70, 0 0 20px #ec43dc25;
+}
+.string:focus-visible .note-label { opacity: .9; }
+.harp-controls {
+  position: absolute; z-index: 5; top: calc(100% + 12px); left: 50%;
+  display: flex; gap: 16px; transform: translateX(-50%);
+}
+.change-string {
+  width: 48px; height: 48px; display: grid; place-items: center;
+  padding: 0; border: 0; border-radius: 50%; color: #ffe0ac;
+  background: #ffe0ac0a; cursor: pointer; touch-action: manipulation;
+  transition: background .2s, transform .2s, color .2s;
+}
+.change-string svg { width: 100%; height: 100%; stroke: currentColor; stroke-width: 1.3; fill: none; }
+.change-string svg path { stroke-width: 1.9; stroke-linecap: round; }
+.change-string:hover:not(:disabled) { background: #ffe0ac22; }
+.change-string:focus-visible { outline: 2px solid #ffe0ac; outline-offset: 4px; }
+.change-string:active:not(:disabled) { transform: scale(.93); }
+.change-string:disabled { cursor: default; opacity: .28; }
+.add-string.inviting { animation: invite 3.8s ease-in-out 2s 3; }
+.motes { position: absolute; z-index: 4; inset: 0; pointer-events: none; overflow: hidden; }
+.mote { position: absolute; width: 2px; height: 2px; background: #ffeafa; border-radius: 50%; box-shadow: 0 0 6px #ffd0ec; animation: mote-flight 1.5s ease-out forwards; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@keyframes appear { from { opacity: 0; } to { opacity: 1; } }
+@keyframes invite { 0%, 70%, 100% { filter: brightness(1); } 35% { filter: brightness(1.65); } }
+@keyframes mote-flight { 0% { opacity: 0; transform: translate(0, 0) scale(.4); } 15% { opacity: .7; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.2); } }
+@media (max-width: 600px) {
+  .harp { width: min(99vw, calc((100dvh - 110px) * 1.34164)); }
+  .note-label { bottom: calc(100% + 21px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .string.sounding .note-label { opacity: 1; }
+  .motes { display: none; }
+}
