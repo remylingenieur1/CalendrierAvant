@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Snowflake fractals with sibling-index() and sibling-count()</title>
+    <style>
+      /* Registered so they compute (and freeze) on the element that declares them */
+      @property --hue {
+        syntax: "<angle>";
+        inherits: true;
+        initial-value: 200deg;
+      }
+      @property --twist {
+        syntax: "<angle>";
+        inherits: true;
+        initial-value: 0deg;
+      }
+
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: radial-gradient(circle at 50% 45%, #0f1b2e 0%, #05070d 70%);
+        color: #cdd6e4;
+        font:
+          14px/1.5 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      .stage {
+        container-type: size;
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100dvh;
+        overflow: hidden;
+      }
+
+      /* ---------- The fractal: this is the whole idea ---------- */
+      .flake {
+        --ratio: 0.42; /* each level's size relative to its parent */
+        --fan: 120deg; /* how wide child branches spread */
+        --len: calc(
+          47cqmin * (1 - var(--ratio))
+        ); /* geometric series fits the stage */
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 0;
+        height: 0;
+      }
+      .flake.breathe {
+        animation: breathe 6s ease-in-out infinite alternate;
+      }
+      @keyframes breathe {
+        from {
+          --twist: -14deg;
+        }
+        to {
+          --twist: 14deg;
+        }
+      }
+
+      .node {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 0;
+        height: 0;
+      }
+
+      /* Level 1: arms spaced evenly around the full circle */
+      .flake > .node {
+        --hue: calc(
+          190deg + 30deg * sibling-index() / sibling-count()
+        ); /* icy blues only */
+        transform: rotate(
+            calc(360deg / sibling-count() * sibling-index() + var(--twist))
+          )
+          translateY(calc(-1 * var(--len))) scale(var(--ratio));
+      }
+
+      /* Every deeper level: children fan out around the parent's direction */
+      .node > .node {
+        transform: rotate(
+            calc(
+              (sibling-index() - (sibling-count() + 1) / 2) * var(--fan) /
+                max(sibling-count() - 1, 1) + var(--twist)
+            )
+          )
+          translateY(calc(-1 * var(--len))) scale(var(--ratio));
+      }
+
+      /* The arm: drawn from this node back to its parent (in this node's scaled space) */
+      .node::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: calc(-1.25px / var(--ratio));
+        width: calc(2.5px / var(--ratio));
+        height: calc(var(--len) / var(--ratio));
+        border-radius: 99px;
+        background: linear-gradient(
+          to bottom,
+          hsl(var(--hue) 70% 88%),
+          hsl(var(--hue) 60% 62% / 0.5)
+        );
+      }
+      /* The tip */
+      .node::after {
+        content: "";
+        position: absolute;
+        width: calc(9px / var(--ratio));
+        height: calc(9px / var(--ratio));
+        left: calc(-4.5px / var(--ratio));
+        top: calc(-4.5px / var(--ratio));
+        border-radius: 50%;
+        background: hsl(var(--hue) 80% 94%);
+        box-shadow: 0 0 calc(10px / var(--ratio)) hsl(var(--hue) 90% 70%);
+      }
+      .center {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 14px;
+        height: 14px;
+        margin: -7px 0 0 -7px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 0 18px #9cf;
+      }
+
+      /* ---------- Settings button + popover ---------- */
+      .settings-btn {
+        position: fixed;
+        z-index: 2;
+        top: max(16px, env(safe-area-inset-top));
+        right: max(16px, env(safe-area-inset-right));
+        height: 44px;
+        padding: 0 16px 0 13px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font:
+          600 14px/1 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        background: rgb(11 17 32 / 0.7);
+        color: #e3e9f3;
+        border: 1px solid #23304d;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+      .settings-btn:hover {
+        background: rgb(20 30 52 / 0.85);
+        border-color: #3a4c73;
+      }
+      .settings-btn:focus-visible {
+        outline: 2px solid #7fc4ff;
+        outline-offset: 2px;
+      }
+      .settings-btn svg {
+        width: 20px;
+        height: 20px;
+        flex: none;
+      }
+
+      .panel {
+        position: fixed;
+        inset: auto;
+        top: calc(max(16px, env(safe-area-inset-top)) + 54px);
+        right: max(16px, env(safe-area-inset-right));
+        margin: 0;
+        width: min(320px, calc(100vw - 32px));
+        max-height: calc(100dvh - 100px);
+        overflow-y: auto;
+        padding: 20px 20px 8px;
+        background: rgb(11 17 32 / 0.88);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid #23304d;
+        border-radius: 14px;
+        color: inherit;
+        box-shadow: 0 18px 50px rgb(0 0 0 / 0.5);
+        opacity: 0;
+        transform: translateY(-6px) scale(0.98);
+        transform-origin: top right;
+        transition:
+          opacity 0.16s,
+          transform 0.16s,
+          overlay 0.16s allow-discrete,
+          display 0.16s allow-discrete;
+      }
+      .panel:popover-open {
+        opacity: 1;
+        transform: none;
+      }
+      @starting-style {
+        .panel:popover-open {
+          opacity: 0;
+          transform: translateY(-6px) scale(0.98);
+        }
+      }
+      .panel::backdrop {
+        background: transparent;
+      }
+
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+        color: #fff;
+        letter-spacing: -0.01em;
+      }
+      .ctrl {
+        margin-bottom: 14px;
+      }
+      .ctrl label {
+        display: flex;
+        justify-content: space-between;
+        font-weight: 600;
+        color: #e3e9f3;
+      }
+      .ctrl label output {
+        font-variant-numeric: tabular-nums;
+        color: #7fc4ff;
+        font-weight: 500;
+      }
+      .ctrl small {
+        display: block;
+        color: #6f7d95;
+        margin-top: 2px;
+      }
+      input[type="range"] {
+        width: 100%;
+        accent-color: #7fc4ff;
+        margin-top: 6px;
+      }
+      .toggle {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin: 4px 0 16px;
+        font-weight: 600;
+      }
+      .note {
+        border-left: 3px solid #7fc4ff;
+        padding: 6px 10px;
+        margin: 0 0 16px;
+        color: #b7c3d6;
+        background: #0f1830;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stage">
+      <div class="flake breathe" id="flake"></div>
+      <div class="center"></div>
+    </main>
+
+    <button class="settings-btn" popovertarget="settings">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <line x1="4" y1="6" x2="20" y2="6" />
+        <circle cx="9" cy="6" r="2.2" fill="#0b1120" />
+        <line x1="4" y1="12" x2="20" y2="12" />
+        <circle cx="15" cy="12" r="2.2" fill="#0b1120" />
+        <line x1="4" y1="18" x2="20" y2="18" />
+        <circle cx="7" cy="18" r="2.2" fill="#0b1120" />
+      </svg>
+      <span>Settings</span>
+    </button>
+
+    <aside class="panel" id="settings" popover>
+      <h1>Snowflake fractal ❄️</h1>
+
+      <div class="ctrl">
+        <label>Arms <output id="armsOut">6</output></label>
+        <input type="range" id="arms" min="2" max="8" value="6" />
+        <small>Number of first-level children</small>
+      </div>
+      <div class="ctrl">
+        <label>Branches per node <output id="branchesOut">3</output></label>
+        <input type="range" id="branches" min="1" max="3" value="3" />
+        <small>Number of children at every deeper level</small>
+      </div>
+      <div class="ctrl">
+        <label>Depth <output id="depthOut">4</output></label>
+        <input type="range" id="depth" min="1" max="5" value="4" />
+      </div>
+
+      <p class="note">
+        These three sliders only add or remove elements. The stylesheet stays
+        the same, and the functions recalculate every angle.
+      </p>
+
+      <div class="ctrl">
+        <label>Fan angle <output id="fanOut">120°</output></label>
+        <input type="range" id="fan" min="0" max="320" value="120" />
+      </div>
+      <div class="ctrl">
+        <label>Scale per level <output id="ratioOut">0.42</output></label>
+        <input
+          type="range"
+          id="ratio"
+          min="0.25"
+          max="0.6"
+          step="0.01"
+          value="0.42"
+        />
+      </div>
+      <label class="toggle"
+        ><input type="checkbox" id="breathe" checked /> Breathe (animates
+        <code>--twist</code>)</label
+      >
+    </aside>
+
+    <script>
+      const flake = document.getElementById("flake");
+      const $ = (id) => document.getElementById(id);
+
+      function grow(parent, n, depthLeft, branches) {
+        for (let i = 0; i < n; i++) {
+          const el = document.createElement("div");
+          el.className = "node";
+          if (depthLeft > 1) grow(el, branches, depthLeft - 1, branches);
+          parent.appendChild(el);
+        }
+      }
+
+      function build() {
+        const arms = +$("arms").value,
+          branches = +$("branches").value,
+          depth = +$("depth").value;
+        $("armsOut").textContent = arms;
+        $("branchesOut").textContent = branches;
+        $("depthOut").textContent = depth;
+        const frag = document.createDocumentFragment();
+        grow(frag, arms, depth, branches);
+        flake.replaceChildren(frag);
+      }
+
+      ["arms", "branches", "depth"].forEach((id) =>
+        $(id).addEventListener("input", build),
+      );
+      $("fan").addEventListener("input", (e) => {
+        flake.style.setProperty("--fan", e.target.value + "deg");
+        $("fanOut").textContent = e.target.value + "°";
+      });
+      $("ratio").addEventListener("input", (e) => {
+        flake.style.setProperty("--ratio", e.target.value);
+        $("ratioOut").textContent = (+e.target.value).toFixed(2);
+      });
+      $("breathe").addEventListener("change", (e) =>
+        flake.classList.toggle("breathe", e.target.checked),
+      );
+
+      build();
+    </script>
+  </body>
+</html>
