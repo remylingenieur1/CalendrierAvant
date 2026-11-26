@@ -1,19 +1,17 @@
 {
+  "name": "calendrieravant",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "vite",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {
-    "coffe": "^0.0.1",
     "three": "^0.186.1",
     "utif": "^3.1.0"
   },
-  "name": "calendrieravant",
-  "version": "1.0.0",
-  "description": "",
-  "main": "cloud-rendrer.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "vite"
-  },
-  "keywords": [],
-  "type": "commonjs",
   "devDependencies": {
     "coffeescript": "^2.7.1",
     "vite": "^8.3.7"
