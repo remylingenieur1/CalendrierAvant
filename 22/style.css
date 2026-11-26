@@ -1,0 +1,815 @@
+@font-face {
+  font-family: "Gochi Hand";
+  src: url("https://fonts.gstatic.com/s/gochihand/v27/hES06XlsOjtJsgCkx1Pkfon_-18kTWE.woff2")
+    format("woff2");
+  font-display: swap;
+}
+
+/* The iris colour, registered so it can ease from one to the next. */
+@property --ic {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #256888;
+}
+/* Which copy of an effect's animation plays: 0 before any click, then 1, 2, 1, 2… Switching between two identical
+   animations is what makes a finished one play again on the next click. */
+@property --par {
+  syntax: "<integer>";
+  inherits: true;
+  initial-value: 0;
+}
+/* Registered, so each is worked out once, where it is set, and handed down as a value: unregistered, a custom
+   property is handed down as its formula, and every descendant that reads it works it out again. */
+@property --cx {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+@property --cy {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+@property --gx {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+@property --gy {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@layer base {
+  :root {
+    --T: min(640px, 80vmin); /* one tile of the pattern */
+    --pattern: url("https://assets.codepen.io/36869/pattern-v7.webp"); /* the pattern without irises */
+  }
+  html,
+  body {
+    margin: 0;
+  }
+  body {
+    background: #c8141b;
+  }
+  .defs {
+    position: absolute;
+  }
+  /* the wall is fixed, out of the page's flow: the card takes the second row itself, and on phones the labels the rows after it */
+  .colophon {
+    grid-row: 2;
+  }
+  .labels {
+    grid-row: 3;
+  }
+  .labels.left {
+    grid-row: 4;
+  }
+  .pupils {
+    position: fixed;
+    inset: 0;
+    cursor: crosshair;
+    background: var(--pattern) 0 0 / var(--T) var(--T) repeat; /* on the fixed wall, not body: a fixed body background slips under the eyes in an overscroll bounce, and iOS ignores it */
+  }
+  /* One SVG of eyes per tile, laid over the background's tiles. Its box reaches 10% past the tile on every side, as an
+     eye crossing a tile's edge is drawn by one tile only; so content-visibility can skip the tiles off the screen
+     (their style, layout and paint) without cutting those eyes at the seam. */
+  .tile {
+    position: absolute;
+    left: calc((var(--ti) - 0.1) * var(--T));
+    top: calc((var(--tj) - 0.1) * var(--T));
+    inline-size: calc(var(--T) * 1.2);
+    block-size: calc(var(--T) * 1.2);
+    svg {
+      display: block;
+      inline-size: 100%;
+      block-size: 100%;
+      overflow: visible;
+    }
+  }
+  /* Only the tiles the screen can show are drawn: a column needs the screen wider than its left edge (less the 10%
+     an eye may reach back into it), a row likewise. Each eye costs style work on every pointer move, so 6 tiles on a
+     1440 x 900 screen instead of 20 is most of the saving. (content-visibility: auto would not do: Chrome keeps
+     everything within a wide margin round the screen, here all 20.) */
+  .pupils {
+    container: wall / size;
+  }
+  @container wall (width <= calc(0.9 * min(640px, 80vmin))) {
+    .c1 {
+      display: none;
+    }
+  }
+  @container wall (width <= calc(1.9 * min(640px, 80vmin))) {
+    .c2 {
+      display: none;
+    }
+  }
+  @container wall (width <= calc(2.9 * min(640px, 80vmin))) {
+    .c3 {
+      display: none;
+    }
+  }
+  @container wall (width <= calc(3.9 * min(640px, 80vmin))) {
+    .c4 {
+      display: none;
+    }
+  }
+  @container wall (height <= calc(0.9 * min(640px, 80vmin))) {
+    .r1 {
+      display: none;
+    }
+  }
+  @container wall (height <= calc(1.9 * min(640px, 80vmin))) {
+    .r2 {
+      display: none;
+    }
+  }
+  @container wall (height <= calc(2.9 * min(640px, 80vmin))) {
+    .r3 {
+      display: none;
+    }
+  }
+
+  /* ---- The drawing, in the original artwork's colours ---- */
+  .ib {
+    fill: var(--ic);
+  } /* each iris's colour, inherited by the shared iris drawing through <use> */
+  .pupil {
+    fill: #060303;
+  }
+  .hl {
+    fill: #fbd7bc;
+  } /* the original's cream highlights */
+  .lid-skin {
+    fill: #f80b1e;
+  }
+  .lid-edge {
+    fill: none;
+    stroke: #060303;
+    stroke-linecap: round;
+  }
+
+  /* ---- Following the pointer ---- */
+  .ir {
+    translate: calc(var(--gx) * var(--tr) * 1px)
+      calc(var(--gy) * var(--tr) * 1px);
+  }
+  .pu {
+    translate: calc(var(--gx) * var(--tp) * 1px)
+      calc(var(--gy) * var(--tp) * 1px);
+  } /* a little further, for depth */
+
+  /* ---- What a click does (each eye waits --dl, its distance from the click) ---- */
+  /* Colour: the next colour, eased in. */
+  .ir {
+    transition: --ic 520ms cubic-bezier(0.3, 0.7, 0.3, 1) var(--dl);
+  }
+  /* the parts the other effects move, each about its own middle */
+  .lid {
+    translate: 0 var(--lu);
+  }
+  .pupil {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  @keyframes blinkA {
+    0%,
+    100% {
+      translate: 0 var(--lu);
+    }
+    38%,
+    52% {
+      translate: 0 var(--ld);
+    }
+  }
+  @keyframes blinkB {
+    0%,
+    100% {
+      translate: 0 var(--lu);
+    }
+    38%,
+    52% {
+      translate: 0 var(--ld);
+    }
+  }
+  @keyframes dilateA {
+    0%,
+    100% {
+      scale: 1;
+    }
+    18% {
+      scale: 1.58;
+    }
+    40% {
+      scale: 1.5;
+    }
+  }
+  @keyframes dilateB {
+    0%,
+    100% {
+      scale: 1;
+    }
+    18% {
+      scale: 1.58;
+    }
+    40% {
+      scale: 1.5;
+    }
+  }
+  @keyframes rollA {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    28%,
+    68% {
+      translate: 0 calc(var(--ri) * -1.6px);
+    }
+  }
+  @keyframes rollB {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    28%,
+    68% {
+      translate: 0 calc(var(--ri) * -1.6px);
+    }
+  }
+
+  /* The switcher: which effect a click plays. */
+  .effects {
+    position: fixed;
+    inset: 14px 0 auto;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    inline-size: fit-content;
+    max-inline-size: calc(100vw - 24px);
+    margin-inline: auto;
+    padding: 3px;
+    border: 1px solid oklch(100% 0 0 / 0.16);
+    border-radius: 999px;
+    background: oklch(14% 0.02 20 / 0.82);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 4px 14px oklch(0% 0 0 / 0.3);
+    font:
+      600 12px/1 system-ui,
+      sans-serif;
+  }
+  .effects .lbl {
+    padding: 0 8px 0 10px;
+    color: oklch(100% 0 0 / 0.55);
+    font-weight: 500;
+  }
+  .fx {
+    padding: 7px 11px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: oklch(100% 0 0 / 0.7);
+    font: inherit;
+    cursor: pointer;
+    &:hover {
+      color: white;
+      background: oklch(100% 0 0 / 0.08);
+    }
+    &:focus-visible {
+      outline: 2px solid oklch(80% 0.12 30);
+      outline-offset: 1px;
+    }
+  }
+
+  /* The hints , one after another: move, click, then
+     the other effects. A short note in a marker hand, and a hand-drawn arrow. */
+  .hint {
+    position: fixed;
+    z-index: 11;
+    color: oklch(98% 0.01 80);
+    font:
+      400 clamp(22px, 3.6vmin, 30px)/1 "Gochi Hand",
+      "Comic Sans MS",
+      cursive;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition:
+      opacity 500ms,
+      translate 500ms;
+    svg {
+      position: absolute;
+      overflow: visible;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.4px;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      animation: hint-bob 2.4s ease-in-out infinite;
+      filter: drop-shadow(0 1px 3px #000);
+    }
+    .label {
+      display: inline-block;
+      rotate: var(--tilt, -4deg);
+      text-shadow:
+        0 2px 8px #000,
+        0 0 2px #000;
+    }
+    path {
+      vector-effect: non-scaling-stroke;
+    }
+  }
+  @keyframes hint-bob {
+    50% {
+      translate: var(--bob, 0 -4px);
+    }
+  }
+  /* "move around": in the middle, the arrow curling up towards an eye */
+  .h-move {
+    --tilt: -5deg;
+    inset: 46% auto auto 42%;
+    opacity: 1;
+    svg {
+      inset: auto auto calc(100% + 4px) -14px;
+      block-size: 46px;
+      rotate: -55deg;
+      scale: -1 1;
+    }
+  }
+  /* "now click the eyes": just under the middle */
+  .h-click {
+    --tilt: 4deg;
+    inset: 52% auto auto 46%;
+    svg {
+      inset: calc(100% + 4px) auto auto 30px;
+      block-size: 40px;
+      rotate: 160deg;
+    }
+  }
+  /* "or try another": under the effect buttons, the arrow rising into them */
+  .h-fx {
+    --tilt: 3deg;
+    inset: 72px auto auto calc(50% + 30px);
+    svg {
+      inset: auto auto calc(100% + 2px) -20px;
+      block-size: 34px;
+      rotate: 10deg;
+    }
+  }
+
+  .colophon,
+  .labels {
+    --card-heading: oklch(88% 0 0);
+    --card-lead: oklch(86% 0 0);
+    --card-text: oklch(64% 0 0);
+    --card-faint: oklch(50% 0 0);
+    --card-code: oklch(90% 0 0);
+    --card-link: white;
+    --card-bg: oklch(18% 0 0 / 0.72);
+    --card-border: oklch(100% 0 0 / 0.1);
+    --card-line: oklch(100% 0 0 / 0.07);
+    --card-chip: oklch(100% 0 0 / 0.07);
+    --card-chip-hover: oklch(100% 0 0 / 0.16);
+    --card-shadow: oklch(0% 0 0 / 0.8);
+    --card-focus: oklch(80% 0 0);
+    --pill-bg: oklch(22% 0 0);
+    --pill-ink: oklch(72% 0 0);
+    --pill-strong: white;
+    --pill-border: oklch(32% 0 0);
+    --pill-hover: oklch(30% 0 0);
+    --site-bg: oklch(94% 0 0);
+    --site-ink: oklch(20% 0 0);
+    --site-hover: white;
+    --pill-shadow: oklch(0% 0 0 / 0.5);
+  }
+  /* The explanation: a card set apart from the piece. A lead sentence, then numbered points; the functions are chips
+     that link to their reference pages, so it reads as notes about the page, not part of it. */
+  .colophon {
+    inline-size: min(100%, 680px);
+    font:
+      14px/1.6 system-ui,
+      sans-serif;
+    color: var(--card-text);
+  }
+  .colophon-head {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    h2 {
+      font:
+        650 15px/1.3 system-ui,
+        sans-serif;
+      letter-spacing: -0.01em;
+      color: var(--card-heading);
+    }
+    .down {
+      display: grid;
+      place-items: center;
+      inline-size: 40px;
+      block-size: 40px;
+      border-radius: 50%;
+      color: var(--card-faint);
+      animation: nudge 2.2s ease-in-out infinite;
+      &:hover {
+        color: var(--card-link);
+      }
+      &:focus-visible {
+        outline: 2px solid var(--card-focus);
+      }
+      svg {
+        inline-size: 22px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+    }
+  }
+  @keyframes nudge {
+    50% {
+      translate: 0 5px;
+    }
+  }
+  #how-text {
+    scroll-margin-block-start: 8vmin;
+    padding: 26px 30px 10px;
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    background: var(--card-bg);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 24px 60px -30px var(--card-shadow);
+    > p {
+      margin-block-end: 18px;
+      font-size: 16px;
+      line-height: 1.55;
+      color: var(--card-lead);
+      text-wrap: pretty;
+      > a {
+        color: var(--card-link);
+        text-decoration-color: color-mix(
+          in oklch,
+          currentColor 40%,
+          transparent
+        );
+        text-underline-offset: 3px;
+        &:hover {
+          text-decoration-color: currentColor;
+        }
+      }
+    }
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: point;
+      border-block-start: 1px solid var(--card-line);
+    }
+    li {
+      counter-increment: point;
+      position: relative;
+      padding: 13px 0 13px 2.6em;
+      text-wrap: pretty;
+    }
+    li + li {
+      border-block-start: 1px solid var(--card-line);
+    }
+    li::before {
+      content: counter(point, decimal-leading-zero);
+      position: absolute;
+      inset-inline-start: 0;
+      font:
+        500 12px/2 ui-monospace,
+        "SF Mono",
+        Menlo,
+        monospace;
+      color: var(--card-faint);
+    }
+    code {
+      font:
+        500 0.88em ui-monospace,
+        "SF Mono",
+        Menlo,
+        monospace;
+      color: var(--card-code);
+      white-space: nowrap;
+    }
+    a:has(> code) {
+      padding: 1px 6px;
+      border-radius: 6px;
+      background: var(--card-chip);
+      box-shadow: inset 0 0 0 1px var(--card-border);
+      text-decoration: none;
+      transition: background 150ms;
+      &:hover {
+        background: var(--card-chip-hover);
+      }
+    }
+    a:focus-visible {
+      outline: 2px solid var(--card-focus);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+  }
+  /* The labels in the corners, as on Hive's pen: Reactive CSS on the right, the X profile on the left. */
+  .labels {
+    position: fixed;
+    inset: auto 14px 14px auto;
+    z-index: 5;
+    display: flex;
+    gap: 8px;
+    font:
+      600 12px/1 system-ui,
+      sans-serif;
+  }
+  .labels > * {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    text-decoration: none;
+    box-shadow: 0 4px 14px var(--pill-shadow);
+  }
+  .label-made {
+    background: var(--pill-bg);
+    color: var(--pill-ink);
+    border: 1px solid var(--pill-border);
+    b {
+      color: var(--pill-strong);
+    }
+  }
+  :is(.label-link, .label-x) {
+    &:focus-visible {
+      outline: 2px solid var(--card-focus);
+      outline-offset: 2px;
+    }
+  }
+  .label-link {
+    background: var(--site-bg);
+    color: var(--site-ink);
+    &:hover {
+      background: var(--site-hover);
+    }
+  }
+  .labels.left {
+    inset: auto auto 14px 14px;
+  }
+  .label-x {
+    background: var(--pill-bg);
+    color: var(--pill-strong);
+    border: 1px solid var(--pill-border);
+    &:hover {
+      background: var(--pill-hover);
+    }
+  }
+  /* Phones: the labels end the page instead of floating over the piece. */
+  @media (width < 700px) {
+    .labels {
+      position: static;
+      justify-content: center;
+      flex-wrap: wrap;
+      padding-block-end: 3vmin;
+    }
+    .labels.left {
+      padding-block-end: 6vmin;
+    }
+  }
+  /* The piece fills the first screen. "How it is built" and an arrow sit at the bottom of that screen
+     (pulled up by the height of that head), and the explanation follows below. */
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    display: grid;
+    grid-template-rows: minmax(100dvh, auto) auto;
+    justify-items: center;
+  } /* a tall piece grows */
+  body > main[class] {
+    justify-self: stretch;
+    padding-block-end: calc(4vmin + 104px);
+  } /* room for the heading */
+  .colophon {
+    position: relative;
+    padding-inline: 16px;
+  } /* above a positioned <main> */
+  .colophon {
+    --head: 104px;
+    margin-block-start: calc(-1 * var(--head));
+    padding-block-end: calc(8vmin + 52px);
+  }
+  .colophon-head {
+    block-size: var(--head);
+    align-content: end;
+    padding-block-end: 18px;
+    margin-block-end: 6vmin;
+  }
+  @media (width < 700px) {
+    .colophon {
+      padding-block-end: 6vmin;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hint svg {
+      animation: none;
+    }
+    .ir {
+      transition-duration: 0s;
+      transition-delay: 0s;
+    }
+    .lid,
+    .pupil,
+    .fxw {
+      animation: none !important;
+    }
+  }
+}
+
+/* ---- Reactive CSS ---- */
+
+@layer reactive {
+  /* The pointer, read once for the whole page, and whether it is here. */
+  .pupils {
+    --hot: state(0);
+    --mx: mouse(x);
+    --my: mouse(y);
+  }
+  .pupils:on(pointerenter|pointerdown) {
+    --hot: set(1);
+  }
+  .pupils:on(pointerleave) {
+    --hot: set(0);
+  }
+
+  /* The page owns: the effect chosen (0..3), clicks so far, the colour, and where the last click landed. */
+  body {
+    --fx: state(0);
+    --n: state(0);
+    --pal: state(0);
+    --clx: state(0px);
+    --cly: state(0px);
+  }
+  /* The hints: moved about for a while, clicked the eyes, picked another effect. */
+  body {
+    --tried-move: state(0);
+    --tried-click: state(0);
+    --tried-fx: state(0);
+  }
+  .pupils:when(--hot == 1):on(after(2.5s)) {
+    --tried-move: set(1);
+  }
+  body .pupils:on(pointerdown) {
+    --tried-click: set(1);
+  }
+  body .fx:on(click) {
+    --tried-fx: set(1);
+  }
+  body:when(--tried-move == 1) .h-move {
+    opacity: 0;
+    translate: 0 8px;
+  }
+  body:when(--tried-move == 1 and --tried-click == 0) .h-click {
+    opacity: 1;
+  }
+  body:when(--tried-click == 1 and --tried-fx == 0) .h-fx {
+    opacity: 1;
+  }
+  body .pupils:on(click) {
+    --n: set(var(--n) + 1);
+    --clx: set(event(client-x));
+    --cly: set(event(client-y));
+  }
+  body:when(--fx == 0) .pupils:on(click) {
+    --pal: set((var(--pal) + 1) * clamp(0, 5 - var(--pal), 1));
+  }
+
+  /* Choosing an effect starts its count again, so it waits for the next click instead of playing at once. */
+  .fx0:on(click) {
+    --fx: set(0);
+    --n: set(0);
+  }
+  .fx1:on(click) {
+    --fx: set(1);
+    --n: set(0);
+  }
+  .fx2:on(click) {
+    --fx: set(2);
+    --n: set(0);
+  }
+  .fx3:on(click) {
+    --fx: set(3);
+    --n: set(0);
+  }
+  body:when(--fx == 0) .fx0,
+  body:when(--fx == 1) .fx1,
+  body:when(--fx == 2) .fx2,
+  body:when(--fx == 3) .fx3 {
+    color: oklch(14% 0.02 20);
+    background: white;
+  }
+
+  /* blue (the original), green, amber, violet, red, milky white */
+  @container style(--pal: 0) {
+    .ir {
+      --ic: #256888;
+    }
+  }
+  @container style(--pal: 1) {
+    .ir {
+      --ic: #3c9148;
+    }
+  }
+  @container style(--pal: 2) {
+    .ir {
+      --ic: #cf912b;
+    }
+  }
+  @container style(--pal: 3) {
+    .ir {
+      --ic: #7951b5;
+    }
+  }
+  @container style(--pal: 4) {
+    .ir {
+      --ic: #c7222b;
+    }
+  }
+  @container style(--pal: 5) {
+    .ir {
+      --ic: #dfdbd2;
+    }
+  }
+
+  /* Blink, Dilate, Roll: one of two identical animations, by the click's parity. */
+  @container style(--fx: 1) and style(--par: 1) {
+    .lid {
+      animation: blinkA 520ms ease-in-out var(--dl) both;
+    }
+  }
+  @container style(--fx: 1) and style(--par: 2) {
+    .lid {
+      animation: blinkB 520ms ease-in-out var(--dl) both;
+    }
+  }
+  @container style(--fx: 2) and style(--par: 1) {
+    .pupil {
+      animation: dilateA 1500ms cubic-bezier(0.3, 0.7, 0.3, 1) var(--dl) both;
+    }
+  }
+  @container style(--fx: 2) and style(--par: 2) {
+    .pupil {
+      animation: dilateB 1500ms cubic-bezier(0.3, 0.7, 0.3, 1) var(--dl) both;
+    }
+  }
+  @container style(--fx: 3) and style(--par: 1) {
+    .fxw {
+      animation: rollA 1600ms cubic-bezier(0.4, 0, 0.3, 1) var(--dl) both;
+    }
+  }
+  @container style(--fx: 3) and style(--par: 2) {
+    .fxw {
+      animation: rollB 1600ms cubic-bezier(0.4, 0, 0.3, 1) var(--dl) both;
+    }
+  }
+}
+
+/* ---- Native CSS: where each eye is, and where it looks ---- */
+
+body {
+  --par: calc(sign(var(--n)) * (1 + mod(var(--n) - 1, 2)));
+}
+.eye {
+  /* its place on the screen: its tile's corner plus its place in the tile */
+  --cx: calc((var(--ti) + var(--x)) * var(--T));
+  --cy: calc((var(--tj) + var(--y)) * var(--T));
+  /* how long it waits after a click: its distance from it, at 1.7px a millisecond */
+  --dl: calc(
+    hypot(var(--cx) - var(--clx), var(--cy) - var(--cly)) / 1.7px * 1ms
+  );
+}
+.ir {
+  /* Towards the pointer, fully turned once it is 25vmin away: the offset over max(distance, 25vmin) is the same as
+     cos and sin of the angle times min(distance / 25vmin, 1), without the trigonometry, for every eye on every move. */
+  --dx: calc(var(--mx) - var(--cx));
+  --dy: calc(var(--my) - var(--cy));
+  --reach: max(hypot(var(--dx), var(--dy)), 25vmin);
+  --gx: calc(var(--hot) * var(--dx) / var(--reach));
+  --gy: calc(var(--hot) * var(--dy) / var(--reach));
+}
+
+/* The pens' background: CSS punctuation, scattered and faint. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--pattern-ink, transparent);
+  mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22240%22%20height%3D%22200%22%3E%3Cg%20transform%3D%22translate%2822%2026%29%20rotate%28-8%29%20scale%281%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3-10C0-10-.6-8.6-.6-6.4V-2.4C-.6-1.1-1.4-.2-3%200-1.4.2-.6%201.1-.6%202.4V6.4C-.6%208.6%200%2010%203%2010%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%2840%2026%29%20rotate%28-8%29%20scale%281%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M-3-10C0-10%20.6-8.6%20.6-6.4V-2.4C.6-1.1%201.4-.2%203%200%201.4.2.6%201.1.6%202.4V6.4C.6%208.6%200%2010-3%2010%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%28104%2042%29%20rotate%2810%29%20scale%281%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%220%22%20cy%3D%22-5%22%20r%3D%221.5%22%20fill%3D%22black%22%20stroke%3D%22none%22/%3E%3Cpath%20d%3D%22M.4%203.2C1%204.6.6%206.8-1.4%208.4%22/%3E%3Ccircle%20cx%3D%22.2%22%20cy%3D%223.4%22%20r%3D%221.5%22%20fill%3D%22black%22%20stroke%3D%22none%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%28168%2022%29%20rotate%286%29%20scale%280.9%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M-2.5-8-4.5%208M3.5-8%201.5%208M-7-3H7M-8%203H6%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%28214%2070%29%20rotate%280%29%20scale%280.8%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M0-7V7M-6-3.5%206%203.5M-6%203.5%206-3.5%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%2866%2092%29%20rotate%28-12%29%20scale%280.9%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M-5-9C-9-4-9%204-5%209M5-9C9-4%209%204%205%209%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%28136%20104%29%20rotate%280%29%20scale%281%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%220%22%20cy%3D%22-4.5%22%20r%3D%221.5%22%20fill%3D%22black%22%20stroke%3D%22none%22/%3E%3Ccircle%20cx%3D%220%22%20cy%3D%224.5%22%20r%3D%221.5%22%20fill%3D%22black%22%20stroke%3D%22none%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%28196%20140%29%20rotate%28-6%29%20scale%280.9%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M-4-6%204%200-4%206%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%2824%20150%29%20rotate%288%29%20scale%280.85%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6-8-6%208%22/%3E%3Ccircle%20cx%3D%22-4.5%22%20cy%3D%22-5.5%22%20r%3D%222.4%22/%3E%3Ccircle%20cx%3D%224.5%22%20cy%3D%225.5%22%20r%3D%222.4%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%28104%20168%29%20rotate%284%29%20scale%280.9%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M-4-9H-7V9H-4M4-9H7V9H4%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%28166%20186%29%20rotate%280%29%20scale%280.9%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4-9-4%209%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%28226%20192%29%20rotate%280%29%20scale%281%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%220%22%20cy%3D%220%22%20r%3D%221.7%22%20fill%3D%22black%22%20stroke%3D%22none%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%28150%2060%29%20rotate%280%29%20scale%280.9%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%220%22%20cy%3D%220%22%20r%3D%221.7%22%20fill%3D%22black%22%20stroke%3D%22none%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%2854%20196%29%20rotate%2814%29%20scale%280.6%29%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M0-7V7M-6-3.5%206%203.5M-6%203.5%206-3.5%22/%3E%3C/g%3E%3C/svg%3E")
+    0 0 / 240px 200px repeat;
+}
