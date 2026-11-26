@@ -1,35 +1,176 @@
+
+* {
+    box-sizing: border-box;
+}
+
 body {
-    gap: 10;
+    margin: 0;
+    min-height: 100vh;
+    padding: 50px 20px;
+    font-family: Georgia, "Times New Roman", serif;
+    color: #fff8e7;
+
+    background:
+        radial-gradient(circle at 15% 20%, #285c43 0, transparent 35%),
+        radial-gradient(circle at 85% 80%, #641f2b 0, transparent 40%),
+        linear-gradient(135deg, #092b20, #123c2c 55%, #071e18);
+
+    background-attachment: fixed;
 }
 
-.calendar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    border: 1px solid #ccc;
-    margin: 20px;
-    padding: 20px;
-    border-radius: 20px;
-}
-
-.card {
-    width: 200px;
-    border: 1px solid #ccc;
-    display: flex;
-    padding: 20px;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: transform 0.2s ease-in-out;
-}
-
-.card:hover {
-    transform: scale(1.05);
-}
+/* Main title */
 
 h1 {
     text-align: center;
-    margin-top: 20px;
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    color: #f8d98b;
+    letter-spacing: 3px;
+    margin: 0 0 45px;
+
+    text-shadow:
+        0 3px 0 #815b25,
+        0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+h1::before {
+    content: "✦ ";
+    color: #fff0bd;
+}
+
+h1::after {
+    content: " ✦";
+    color: #fff0bd;
+}
+
+/* Calendar grid */
+
+.calendar {
+    width: min(1100px, 100%);
+    margin: auto;
+
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+/* Individual doors */
+
+.card {
+    min-height: 155px;
+    position: relative;
+    overflow: hidden;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 2px solid #d6ad61;
+    border-radius: 14px;
+
+    background:
+        linear-gradient(145deg, #a8323e, #741d2b);
+
+    box-shadow:
+        0 7px 0 #4b1721,
+        0 12px 20px rgba(0, 0, 0, 0.3);
+
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        background 0.25s ease;
+}
+
+/* Gold decorative corner */
+
+.card::before {
+    content: "✦";
+    position: absolute;
+    top: 10px;
+    right: 13px;
+    color: #f8d98b;
+    font-size: 20px;
+    opacity: 0.8;
+}
+
+/* Card number */
+
+.card h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: normal;
+}
+
+.card a {
+    color: #fff4d5;
+    text-decoration: none;
+    display: block;
+    padding: 30px;
+    text-align: center;
+}
+
+/* Hover effect */
+
+.card:hover {
+    transform: translateY(-7px) rotate(-1deg);
+    background: linear-gradient(145deg, #c0444c, #8e2533);
+
+    box-shadow:
+        0 12px 0 #4b1721,
+        0 20px 30px rgba(0, 0, 0, 0.4);
+}
+
+.card a:hover {
+    color: #ffe5a3;
+}
+
+/* Locked doors */
+
+.card.locked {
+    background: linear-gradient(145deg, #68766b, #35483c);
+    border-color: #a6ad9c;
+    opacity: 0.75;
+    box-shadow: 0 7px 0 #26352b;
+}
+
+.card.locked a {
+    cursor: not-allowed;
+}
+
+p {
+    text-align: center;
+    font-size: 2.1rem;
+    color: #f8d98b;
+    margin-top: 30px;
+}
+
+/* Responsive layout */
+
+@media (max-width: 750px) {
+    .calendar {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+    }
+
+    .card {
+        min-height: 125px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 35px 14px;
+    }
+
+    .calendar {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .card {
+        min-height: 115px;
+    }
+
+    .card h2 {
+        font-size: 1.2rem;
+    }
 }

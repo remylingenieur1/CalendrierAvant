@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "coffe": "^0.0.1",
     "three": "^0.186.1",
     "utif": "^3.1.0"
   },
@@ -14,6 +15,7 @@
   "keywords": [],
   "type": "commonjs",
   "devDependencies": {
+    "coffeescript": "^2.7.1",
     "vite": "^8.3.7"
   }
 }
